@@ -23,7 +23,7 @@
 Students have no way to check whether a lost item was handed in, and staff keep
 records on paper or in spreadsheets that are hard to search and show private details.
 
-Tracked in the issue list: [Issue #4 — Assigned incident: found items are not searchable and private details are exposed](https://github.com/kalviumcommunity/2627SPR0I_ReFound/issues/4)
+Tracked in the issue list: [Issue #5 — Assigned incident: found items are not searchable and private details are exposed](https://github.com/kalviumcommunity/2627SPR0I_ReFound/issues/5)
 
 ## Team Workflow
 
