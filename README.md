@@ -2,6 +2,38 @@
 
 ### Lost something on campus? Find it here.
 
+## Getting Started
+
+> The run command is not finished yet. It will be added once the service and
+> Docker Compose files exist.
+
+1. Clone the repository:
+
+   ```
+   git clone https://github.com/kalviumcommunity/2627SPR0I_ReFound.git
+   cd 2627SPR0I_ReFound
+   ```
+
+2. Match the local tool versions in [SETUP.md](SETUP.md) (Docker, Docker Compose, Git, psql).
+3. Run the service: _coming soon_ (`docker compose up`).
+
+## Assigned Incident
+
+**Found items on campus cannot be searched, and private ownership details are exposed.**
+Students have no way to check whether a lost item was handed in, and staff keep
+records on paper or in spreadsheets that are hard to search and show private details.
+
+Tracked in the issue list: [Issue #3 — Assigned incident: found items are not searchable and private details are exposed](https://github.com/kalviumcommunity/2627SPR0I_ReFound/issues/3)
+
+## Team Workflow
+
+- All work happens on a feature branch (`feature/<short-name>`).
+- Changes reach `main` only through a pull request.
+- At least one teammate reviews every pull request before it is merged.
+- No direct pushes to `main`. A direct push skips review, hides who changed what
+  and why, and makes "it is on main" easy to confuse with "it is live".
+- Code being on `main` does not mean it is deployed. Deployment is a separate step.
+
 ## Problem Statement
 
 Students often lose their belongings on campus and do not know whether someone has found them. They usually have to visit the help desk or ask other students in group chats.
