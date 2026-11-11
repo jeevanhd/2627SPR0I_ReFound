@@ -2,7 +2,12 @@
 
 ### Lost something on campus? Find it here.
 
-## Getting Started
+## Repository Access
+
+This repository is public: https://github.com/kalviumcommunity/2627SPR0I_ReFound
+Anyone on the course can open it without being added as a collaborator.
+
+## Getting Started (Run Locally)
 
 > The run command is not finished yet. It will be added once the service and
 > Docker Compose files exist.
@@ -23,7 +28,8 @@
 Students have no way to check whether a lost item was handed in, and staff keep
 records on paper or in spreadsheets that are hard to search and show private details.
 
-Tracked in the issue list: [Issue #5 — Assigned incident: found items are not searchable and private details are exposed](https://github.com/kalviumcommunity/2627SPR0I_ReFound/issues/5)
+Tracked in the issue list under the `incident` label:
+[Assigned incident: found items are not searchable and private details are exposed](https://github.com/kalviumcommunity/2627SPR0I_ReFound/issues?q=is%3Aissue+label%3Aincident)
 
 ## Team Workflow
 
@@ -33,6 +39,7 @@ Tracked in the issue list: [Issue #5 — Assigned incident: found items are not 
 - No direct pushes to `main`. A direct push skips review, hides who changed what
   and why, and makes "it is on main" easy to confuse with "it is live".
 - Code being on `main` does not mean it is deployed. Deployment is a separate step.
+- A pull request is merged only after a teammate's review is visible on it.
 
 ## Problem Statement
 
@@ -54,7 +61,7 @@ Private details will only be visible to authorized staff and will never be displ
 
 - **Frontend:** React.js
 - **Backend:** Node.js with Express.js
-- **Database:** MongoDB
+- **Database:** PostgreSQL
 - **DevOps:** Docker and GitHub Actions
 - **Deployment:** Render
 - **Version Control:** Git and GitHub
