@@ -37,8 +37,8 @@ claim and logged item in this browser.
 | `/signup`, `/login` | Everyone | Student sign up; student / staff log in |
 | `/welcome` | Student | Home: ID card, claims ready for pickup, newest items |
 | `/items/:ref/claim` | Student | Private ownership claim |
-| `/claims` | Student | All my claims |
-| `/claims/:id` | Student | One claim: timeline, what to bring, my answers |
+| `/claims` | Student | All my claims, plus "What's new" (unread outcomes; badge in the navbar) |
+| `/claims/:id` | Student | One claim: timeline, rejection reason, withdraw while pending, what to bring |
 | `/staff` | Staff | Desk: counters, claims waiting, recently logged |
 | `/staff/items` | Staff | Inventory of every record, incl. returned; unclaimed 14+ days |
 | `/staff/items/new` | Staff | Log a found item with a staff-only ownership note |
@@ -55,8 +55,8 @@ navigation turns into a menu on phone-sized screens.
 | File | Stands in for |
 | --- | --- |
 | [`src/auth/authService.js`](src/auth/authService.js) | `POST /api/auth/signup`, `POST /api/auth/login` |
-| [`src/services/itemsService.js`](src/services/itemsService.js) | Public items and student claims (`GET /api/items`, `POST /api/items/:ref/claims`, `GET /api/claims/mine`) — not built in the backend yet |
-| [`src/services/staffService.js`](src/services/staffService.js) | `POST /api/items`, `GET /api/items/:ref/claims`, `PATCH /api/claims/:id`, `POST /api/claims/:id/handover` |
+| [`src/services/itemsService.js`](src/services/itemsService.js) | Public items and student claims (`GET /api/items`, `POST /api/items/:ref/claims`, `GET /api/claims/mine`, withdraw a pending claim, unread claim updates) — not built in the backend yet |
+| [`src/services/staffService.js`](src/services/staffService.js) | `POST /api/items`, `GET /api/items/:ref/claims`, `PATCH /api/claims/:id` (needs a `reason` field for rejections; approving should close other pending claims on the item), `POST /api/claims/:id/handover` |
 | [`src/services/auditService.js`](src/services/auditService.js) | `GET /api/audit` |
 | [`src/services/mockDb.js`](src/services/mockDb.js) | The shared browser store all mocks read and write |
 

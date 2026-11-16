@@ -8,6 +8,7 @@ const TABS = [
   { key: "approved", label: "Waiting for pickup", match: (c) => c.status === "approved" && !c.handedOverAt },
   { key: "returned", label: "Returned", match: (c) => Boolean(c.handedOverAt) },
   { key: "rejected", label: "Rejected", match: (c) => c.status === "rejected" },
+  { key: "withdrawn", label: "Withdrawn", match: (c) => c.status === "withdrawn" },
 ];
 
 export default function ReviewClaims() {

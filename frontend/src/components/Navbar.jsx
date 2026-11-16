@@ -2,6 +2,30 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Logo from "./Logo.jsx";
+import { CLAIMS_CHANGED } from "../services/mockDb.js";
+import { getClaimUpdates } from "../services/itemsService.js";
+
+/** Number of claim outcomes the signed-in student hasn't seen yet. */
+function useUnseenCount(user, pathname) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (user?.role !== "student") {
+      setCount(0);
+      return undefined;
+    }
+    const refresh = () => setCount(getClaimUpdates(user.email).length);
+    refresh();
+    window.addEventListener(CLAIMS_CHANGED, refresh);
+    window.addEventListener("storage", refresh); // staff acting in another tab
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(CLAIMS_CHANGED, refresh);
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [user, pathname]);
+  return count;
+}
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -9,6 +33,7 @@ export default function Navbar() {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const isStaff = user?.role === "staff" || user?.role === "supervisor";
+  const unseen = useUnseenCount(user, pathname);
 
   // Close the mobile menu whenever the page changes.
   useEffect(() => {
@@ -22,7 +47,7 @@ export default function Navbar() {
 
   const links = [{ to: "/items", label: "Register" }];
   if (user?.role === "student") {
-    links.push({ to: "/welcome", label: "Home" }, { to: "/claims", label: "My claims", end: false });
+    links.push({ to: "/welcome", label: "Home" }, { to: "/claims", label: "My claims", end: false, badge: unseen });
   }
   if (isStaff) {
     links.push(
@@ -57,8 +82,13 @@ export default function Navbar() {
 
         <nav id="main-nav" className={`nav__links${open ? " is-open" : ""}`} aria-label="Main">
           {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className="nav__link">
+            <NavLink key={l.to} to={l.to} end={l.end} className={`nav__link${l.badge ? " nav__link--badge" : ""}`}>
               {l.label}
+              {l.badge > 0 && (
+                <span className="badge" aria-label={`${l.badge} new update${l.badge === 1 ? "" : "s"}`}>
+                  {l.badge}
+                </span>
+              )}
             </NavLink>
           ))}
           {user ? (

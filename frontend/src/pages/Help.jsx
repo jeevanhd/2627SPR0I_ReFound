@@ -27,7 +27,17 @@ const FAQ = [
   {
     id: "rejected",
     q: "My claim was not approved. What now?",
-    a: "Staff couldn't match your answers to their record. If you're sure it's yours, visit the help desk in person with your student ID and quote your claim number.",
+    a: "Open the claim from My claims — staff always write a short reason. If another student's claim was approved first, yours is closed automatically. If you're sure it's yours, visit the help desk in person with your student ID and quote your claim number.",
+  },
+  {
+    id: "withdraw",
+    q: "I found my item somewhere else. Can I cancel my claim?",
+    a: "Yes, while it's still waiting for review. Open the claim and press “Withdraw this claim”. If you change your mind and the item is still on the rack, you can claim it again.",
+  },
+  {
+    id: "updates",
+    q: "How will I know when something changes?",
+    a: "A red number appears next to My claims when a claim is approved, rejected or handed back. Open the claim to clear it.",
   },
   {
     id: "reserved",

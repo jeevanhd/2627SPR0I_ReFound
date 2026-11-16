@@ -2,7 +2,7 @@
 // Swap each function body for a fetch() call when the public API exists.
 
 import { CATEGORY_COLORS, ITEMS } from "../data/items.js";
-import { KEYS, appendAudit, read, wait, write } from "./mockDb.js";
+import { KEYS, appendAudit, notifyClaimsChanged, read, wait, write } from "./mockDb.js";
 
 export const CATEGORIES = Object.keys(CATEGORY_COLORS).sort();
 
@@ -72,8 +72,9 @@ export async function getItem(ref) {
 
 const displayStatus = (claim) => (claim.handedOverAt ? "returned" : claim.status);
 
+/** The student's active claim on an item. A withdrawn claim doesn't count, so they can claim again. */
 export function findMyClaim(email, ref) {
-  const claim = read(KEYS.claims, []).find((c) => c.email === email && c.ref === ref);
+  const claim = read(KEYS.claims, []).find((c) => c.email === email && c.ref === ref && c.status !== "withdrawn");
   return claim ? { ...claim, status: displayStatus(claim) } : null;
 }
 
@@ -135,4 +136,70 @@ export async function submitClaim({ item, user, description, identifying, lostOn
     detail: { ref: item.ref, title: item.title },
   });
   return claim;
+}
+
+/** Withdraw one of your own claims while it is still waiting for review. */
+export async function withdrawClaim(user, id) {
+  // TODO(backend): DELETE /api/claims/mine/:id (or PATCH status=withdrawn)
+  await wait(400);
+  const claims = read(KEYS.claims, []);
+  const claim = claims.find((c) => c.id === id && c.email === user.email);
+  if (!claim) throw new Error("No claim with that id.");
+  if (claim.status !== "pending") throw new Error("Only a claim that hasn't been reviewed yet can be withdrawn.");
+  const withdrawnAt = new Date().toISOString();
+  write(KEYS.claims, claims.map((c) => (c.id === id ? { ...c, status: "withdrawn", withdrawnAt } : c)));
+  appendAudit({
+    actor: user,
+    action: "claim.withdrawn",
+    entity: "claim",
+    entityId: id,
+    detail: { ref: claim.ref, title: claim.itemTitle, claimant: claim.claimantName ?? claim.email },
+  });
+  notifyClaimsChanged();
+  return { id, status: "withdrawn", withdrawnAt };
+}
+
+/* ---------- Claim updates (in-app notifications) ---------- */
+
+// Outcomes a student should be told about. Pending and withdrawn are their own doing.
+const NEWSWORTHY = ["approved", "rejected", "returned"];
+
+const UPDATE_TEXT = {
+  approved: "Approved — bring your student ID to the help desk.",
+  rejected: "Not approved. Open the claim to see why.",
+  returned: "Handed back to you. Case closed.",
+};
+
+/** Claim outcomes this student hasn't seen yet, newest first. */
+export function getClaimUpdates(email) {
+  // TODO(backend): GET /api/claims/mine?unseen=1 (or a notifications endpoint)
+  if (!email) return [];
+  const seen = read(KEYS.seen, {})[email] ?? {};
+  return read(KEYS.claims, [])
+    .filter((c) => c.email === email)
+    .map((c) => ({ ...c, status: displayStatus(c) }))
+    .filter((c) => NEWSWORTHY.includes(c.status) && seen[c.id] !== c.status)
+    .map((c) => ({
+      id: c.id,
+      ref: c.ref,
+      itemTitle: c.itemTitle,
+      status: c.status,
+      text: UPDATE_TEXT[c.status],
+      at: c.handedOverAt ?? c.reviewedAt ?? c.submittedAt,
+    }))
+    .sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/** Mark updates as seen — all of them, or only the claim ids given. */
+export function markClaimsSeen(email, ids = null) {
+  if (!email) return;
+  const all = read(KEYS.seen, {});
+  const mine = { ...(all[email] ?? {}) };
+  read(KEYS.claims, [])
+    .filter((c) => c.email === email && (!ids || ids.includes(c.id)))
+    .forEach((c) => {
+      mine[c.id] = displayStatus(c);
+    });
+  write(KEYS.seen, { ...all, [email]: mine });
+  notifyClaimsChanged();
 }

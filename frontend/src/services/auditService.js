@@ -9,6 +9,7 @@ export const ACTIONS = {
   "claim.submitted": { label: "Claim filed", tone: "sky" },
   "claim.approved": { label: "Claim approved", tone: "ink" },
   "claim.rejected": { label: "Claim rejected", tone: "stamp" },
+  "claim.withdrawn": { label: "Claim withdrawn", tone: "muted" },
   "item.handed_over": { label: "Handed over", tone: "rose" },
 };
 
@@ -27,7 +28,11 @@ export function describe(entry) {
     case "claim.approved":
       return `Approved claim ${entry.entityId} by ${d.claimant} for ${what}.`;
     case "claim.rejected":
-      return `Rejected claim ${entry.entityId} by ${d.claimant} for ${what}.`;
+      return d.auto
+        ? `Closed claim ${entry.entityId} by ${d.claimant} for ${what} — another claim was approved.`
+        : `Rejected claim ${entry.entityId} by ${d.claimant} for ${what}${d.reason ? ` — “${d.reason}”` : ""}.`;
+    case "claim.withdrawn":
+      return `${d.claimant} withdrew claim ${entry.entityId} for ${what}.`;
     case "item.handed_over":
       return `Handed ${what} to ${d.claimant} after an ID check${d.note ? ` — “${d.note}”` : ""}.`;
     default:
@@ -41,7 +46,7 @@ export async function listAudit({ action = "", q = "" } = {}) {
   return read(KEYS.audit, []).filter((e) => {
     if (action && actionKey(e) !== action) return false;
     if (!needle) return true;
-    const hay = `${e.entityId} ${e.detail?.ref ?? ""} ${e.detail?.title ?? ""} ${e.detail?.claimant ?? ""} ${e.actor?.name ?? ""} ${e.actor?.email ?? ""}`.toLowerCase();
+    const hay = `${e.entityId} ${e.detail?.ref ?? ""} ${e.detail?.title ?? ""} ${e.detail?.claimant ?? ""} ${e.actor?.name ?? ""} ${e.actor?.email ?? ""} ${e.detail?.reason ?? ""}`.toLowerCase();
     return hay.includes(needle);
   });
 }

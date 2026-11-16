@@ -117,7 +117,7 @@ function ClaimAction({ user, item, myClaim }) {
           <span className={`stamp stamp--inline stamp--${myClaim.status}`}>{myClaim.status}</span>
           You claimed this — claim <span className="mono">{myClaim.id}</span>.
         </p>
-        <Link to="/claims" className="btn btn--ghost">View my claims</Link>
+        <Link to={`/claims/${myClaim.id}`} className="btn btn--ghost">Track this claim</Link>
       </div>
     );
   }
