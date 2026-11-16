@@ -168,12 +168,17 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
   await t.test('staff approves a claim and the item is reserved', async () => {
     const res = await request(`/api/claims/${claimId}`, { method: 'PATCH', token: staffToken, body: { status: 'approved' } });
     assert.equal(res.status, 200);
-    assert.equal(res.body.claim.status, 'approved');
+    assert.equal(res.body.status, 'approved');
+    assert.deepEqual(res.body.closedIds, [], 'no other claim was waiting on this item');
 
     const { rows } = await pool.query('SELECT status FROM items WHERE ref = $1', [itemRef]);
     assert.equal(rows[0].status, 'claimed');
 
-    const again = await request(`/api/claims/${claimId}`, { method: 'PATCH', token: staffToken, body: { status: 'rejected' } });
+    // A valid body, so the conflict reported is the claim's state and not the payload.
+    const again = await request(`/api/claims/${claimId}`, {
+      method: 'PATCH', token: staffToken,
+      body: { status: 'rejected', reason: 'Trying to review it a second time.' },
+    });
     assert.equal(again.status, 409, 'a reviewed claim cannot be reviewed twice');
   });
 
@@ -210,7 +215,10 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
     );
     secondClaimId = claim.rows[0].id;
 
-    const rejected = await request(`/api/claims/${secondClaimId}`, { method: 'PATCH', token: staffToken, body: { status: 'rejected' } });
+    const rejected = await request(`/api/claims/${secondClaimId}`, {
+      method: 'PATCH', token: staffToken,
+      body: { status: 'rejected', reason: 'Your description did not match the item.' },
+    });
     assert.equal(rejected.status, 200);
 
     const { rows } = await pool.query('SELECT status FROM items WHERE ref = $1', [secondItemRef]);
@@ -277,6 +285,9 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
     assert.equal(rejected.body.entries.length, 1);
     assert.ok(rejected.body.entries.every((e) => e.action === 'claim.reviewed' && e.detail.status === 'rejected'));
 
+    const withdrawn = await request('/api/audit?action=claim.withdrawn', { token: supervisorToken });
+    assert.equal(withdrawn.status, 200, 'the logbook filters on claim.withdrawn');
+
     const bad = await request('/api/audit?action=nonsense', { token: supervisorToken });
     assert.equal(bad.status, 400);
     assert.match(bad.body.error, /Unknown action filter/);
@@ -297,6 +308,147 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
     const all = await request('/api/audit', { token: supervisorToken });
     const ids = all.body.entries.map((e) => e.id);
     assert.deepEqual(ids, [...ids].sort((a, b) => b - a), 'newest first');
+  });
+
+  await t.test('the staff inventory lists every record with counts and the private note', async () => {
+    const asStudent = await request('/api/staff/items', { token: studentToken });
+    assert.equal(asStudent.status, 403);
+
+    const asStaff = await request('/api/staff/items', { token: staffToken });
+    assert.equal(asStaff.status, 200);
+    const items = asStaff.body.items;
+    assert.equal(items.length, 2, 'the returned item stays in the inventory');
+
+    const charger = items.find((i) => i.ref === itemRef);
+    assert.equal(charger.status, 'handed_over');
+    assert.equal(charger.privateNote, 'SERIAL-9931, staff only');
+    assert.equal(charger.claimsCount, 1);
+    assert.equal(charger.pendingCount, 0);
+    assert.ok(Number.isInteger(charger.daysOnRack) && charger.daysOnRack >= 0);
+
+    const umbrella = items.find((i) => i.ref === secondItemRef);
+    assert.equal(umbrella.status, 'available');
+    assert.equal(umbrella.privateNote, null);
+
+    const order = items.map((i) => i.ref);
+    assert.equal(order[0], secondItemRef, 'newest foundOn first');
+  });
+
+  await t.test('the staff claim queue carries private answers and item detail', async () => {
+    const asStudent = await request('/api/staff/claims', { token: studentToken });
+    assert.equal(asStudent.status, 403);
+
+    const res = await request('/api/staff/claims', { token: staffToken });
+    assert.equal(res.status, 200);
+    const claim = res.body.claims.find((c) => c.id === Number(claimId));
+    assert.equal(claim.status, 'approved');
+    assert.equal(claim.claimant.email, 'jeevan@campus.edu');
+    assert.match(claim.answers.identifying, /blue ink/);
+    assert.equal(claim.item.ref, itemRef);
+    assert.equal(claim.item.privateNote, 'SERIAL-9931, staff only');
+    assert.ok(claim.handedOverAt, 'a returned item reports when it went out');
+
+    const pending = await request('/api/staff/claims?status=pending', { token: staffToken });
+    assert.equal(pending.status, 200);
+    assert.ok(pending.body.claims.every((c) => c.status === 'pending'));
+
+    const withdrawn = await request('/api/staff/claims?status=withdrawn', { token: staffToken });
+    assert.equal(withdrawn.status, 200, 'withdrawn is a valid claim state to filter on');
+    assert.deepEqual(withdrawn.body.claims, []);
+
+    const bad = await request('/api/staff/claims?status=nonsense', { token: staffToken });
+    assert.equal(bad.status, 400);
+  });
+
+  await t.test('a rejection must carry a reason the student will read', async () => {
+    const item = await request('/api/items', {
+      method: 'POST', token: staffToken,
+      body: { title: 'Grey hoodie', description: 'Plain grey pullover.', category: 'Clothing', location: 'Sports hall' },
+    });
+    assert.equal(item.status, 201);
+    const ref = item.body.item.ref;
+
+    const itemId = (await pool.query('SELECT id FROM items WHERE ref = $1', [ref])).rows[0].id;
+    const userId = (await pool.query("SELECT id FROM users WHERE email = 'jeevan@campus.edu'")).rows[0].id;
+    const id = (await pool.query(
+      `INSERT INTO claims (item_id, user_id, description, identifying) VALUES ($1, $2, 'Mine', 'Hole in the pocket') RETURNING id`,
+      [itemId, userId]
+    )).rows[0].id;
+
+    const noReason = await request(`/api/claims/${id}`, { method: 'PATCH', token: staffToken, body: { status: 'rejected' } });
+    assert.equal(noReason.status, 400);
+    assert.match(noReason.body.error, /reason/i);
+
+    const shortReason = await request(`/api/claims/${id}`, { method: 'PATCH', token: staffToken, body: { status: 'rejected', reason: 'no' } });
+    assert.equal(shortReason.status, 400);
+
+    const ok = await request(`/api/claims/${id}`, {
+      method: 'PATCH', token: staffToken,
+      body: { status: 'rejected', reason: "The detail only the owner would know didn't match." },
+    });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.status, 'rejected');
+    assert.deepEqual(ok.body.closedIds, []);
+
+    const stored = (await pool.query('SELECT reason, auto_closed FROM claims WHERE id = $1', [id])).rows[0];
+    assert.match(stored.reason, /owner would know/);
+    assert.equal(stored.auto_closed, false);
+
+    const audit = await request(`/api/audit?action=claim.rejected&q=${ref}`, { token: supervisorToken });
+    assert.equal(audit.body.entries.length, 1);
+    assert.match(audit.body.entries[0].detail.reason, /owner would know/);
+  });
+
+  await t.test('approving one claim closes the competing claims on that item', async () => {
+    const rival = await request('/api/auth/signup', {
+      method: 'POST', body: { name: 'Danushri Prakash', studentId: 'S2402', email: 'danushri@campus.edu', password: 'student-pass-2' },
+    });
+    assert.equal(rival.status, 201);
+    const late = await request('/api/auth/signup', {
+      method: 'POST', body: { name: 'Late Student', studentId: 'S2403', email: 'late@campus.edu', password: 'student-pass-3' },
+    });
+    assert.equal(late.status, 201);
+
+    const item = await request('/api/items', {
+      method: 'POST', token: staffToken,
+      body: { title: 'Canvas tote bag', description: 'With notebooks inside.', category: 'Bags', location: 'Cafeteria' },
+    });
+    assert.equal(item.status, 201);
+    const ref = item.body.item.ref;
+    const itemId = (await pool.query('SELECT id FROM items WHERE ref = $1', [ref])).rows[0].id;
+    const idOf = async (email) => (await pool.query('SELECT id FROM users WHERE email = $1', [email])).rows[0].id;
+
+    // bigint ids come back from pg as strings; the API returns them as numbers.
+    const winner = Number((await pool.query(
+      `INSERT INTO claims (item_id, user_id, description, identifying) VALUES ($1, $2, 'Mine', 'Notebook inside') RETURNING id`,
+      [itemId, await idOf('jeevan@campus.edu')]
+    )).rows[0].id);
+    const loser = Number((await pool.query(
+      `INSERT INTO claims (item_id, user_id, description, identifying) VALUES ($1, $2, 'Mine too', 'Blue cover') RETURNING id`,
+      [itemId, await idOf('danushri@campus.edu')]
+    )).rows[0].id);
+
+    const queue = await request('/api/staff/claims?status=pending', { token: staffToken });
+    const waiting = queue.body.claims.filter((c) => c.item.ref === ref);
+    assert.equal(waiting.length, 2);
+    assert.equal(waiting.find((c) => c.id === winner).otherPending, 1, 'the queue shows the competing claim');
+
+    const approved = await request(`/api/claims/${winner}`, { method: 'PATCH', token: staffToken, body: { status: 'approved' } });
+    assert.equal(approved.status, 200);
+    assert.deepEqual(approved.body.closedIds, [loser]);
+
+    const closed = (await pool.query('SELECT status, reason, auto_closed FROM claims WHERE id = $1', [loser])).rows[0];
+    assert.equal(closed.status, 'rejected');
+    assert.equal(closed.auto_closed, true);
+    assert.match(closed.reason, /Another claim for this item was approved/);
+
+    const lateClaim = (await pool.query(
+      `INSERT INTO claims (item_id, user_id, description, identifying) VALUES ($1, $2, 'late', 'late') RETURNING id`,
+      [itemId, await idOf('late@campus.edu')]
+    )).rows[0].id;
+    const tooLate = await request(`/api/claims/${lateClaim}`, { method: 'PATCH', token: staffToken, body: { status: 'approved' } });
+    assert.equal(tooLate.status, 409);
+    assert.match(tooLate.body.error, /already reserved or returned/);
   });
 
   await t.test('an unknown route is a clean 404', async () => {

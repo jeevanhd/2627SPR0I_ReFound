@@ -7,6 +7,10 @@ export const claimsRouter = Router();
 
 const STAFF = ['staff', 'supervisor'];
 
+/** Shown to the student whose claim lost the race for the item. */
+export const COMPETING_REASON = 'Another claim for this item was approved after an ID check.';
+const MIN_REASON = 5;
+
 async function lockClaim(client, id) {
   const { rows } = await client.query(
     `SELECT c.id, c.item_id, c.user_id, c.status,
@@ -23,6 +27,14 @@ async function lockClaim(client, id) {
   return rows[0];
 }
 
+async function writeAudit(client, actorId, claim, detail) {
+  await client.query(
+    `INSERT INTO audit_log (actor_id, action, entity, entity_id, detail)
+     VALUES ($1, 'claim.reviewed', 'claim', $2, $3)`,
+    [actorId, String(claim.id), detail]
+  );
+}
+
 // PATCH /api/claims/:id — staff approve or reject a claim.
 claimsRouter.patch('/:id', requireAuth(STAFF), async (req, res, next) => {
   try {
@@ -31,39 +43,64 @@ claimsRouter.patch('/:id', requireAuth(STAFF), async (req, res, next) => {
       throw new HttpError(400, "status must be 'approved' or 'rejected'.");
     }
 
+    // A rejection the student cannot understand is worse than no answer, so the reason is required.
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    if (status === 'rejected' && reason.length < MIN_REASON) {
+      throw new HttpError(400, 'Give the student a reason for the rejection — they will see it.');
+    }
+
     const result = await withTransaction(async (client) => {
       const claim = await lockClaim(client, req.params.id);
       if (claim.status !== 'pending') {
         throw new HttpError(409, `This claim was already ${claim.status}.`);
       }
-
-      const { rows } = await client.query(
-        `UPDATE claims SET status = $1, reviewed_by = $2, reviewed_at = now()
-         WHERE id = $3
-         RETURNING id, status, item_id, reviewed_at`,
-        [status, req.user.id, claim.id]
-      );
-
-      if (status === 'approved') {
-        // An approved claim reserves the item, unless it is already spoken for.
-        await client.query(
-          `UPDATE items SET status = 'claimed' WHERE id = $1 AND status = 'available'`,
-          [claim.item_id]
-        );
+      if (status === 'approved' && claim.item_status !== 'available') {
+        throw new HttpError(409, 'This item is already reserved or returned — another claim was approved.');
       }
 
-      await client.query(
-        `INSERT INTO audit_log (actor_id, action, entity, entity_id, detail)
-         VALUES ($1, 'claim.reviewed', 'claim', $2, $3)`,
-        [req.user.id, String(claim.id),
-         { status, ref: claim.ref, title: claim.item_title, claimId: claim.id,
-           claimant: claim.claimant_name, claimantEmail: claim.claimant_email }]
+      const { rows } = await client.query(
+        `UPDATE claims
+         SET status = $1, reason = $2, reviewed_by = $3, reviewed_at = now()
+         WHERE id = $4
+         RETURNING id::int AS id, status, item_id, reviewed_at`,
+        [status, status === 'rejected' ? reason : null, req.user.id, claim.id]
       );
+      const reviewed = rows[0];
 
-      return rows[0];
+      await writeAudit(client, req.user.id, claim, {
+        status, ref: claim.ref, title: claim.item_title, claimId: claim.id,
+        claimant: claim.claimant_name, claimantEmail: claim.claimant_email,
+        ...(status === 'rejected' ? { reason } : {}),
+      });
+
+      let closedIds = [];
+
+      if (status === 'approved') {
+        // The item is reserved, and every other open claim on it is closed with a reason.
+        await client.query(`UPDATE items SET status = 'claimed' WHERE id = $1`, [claim.item_id]);
+
+        const closed = await client.query(
+          `UPDATE claims
+           SET status = 'rejected', reason = $1, auto_closed = true,
+               reviewed_by = $2, reviewed_at = now()
+           WHERE item_id = $3 AND id <> $4 AND status = 'pending'
+           RETURNING id::int AS id`,
+          [COMPETING_REASON, req.user.id, claim.item_id, claim.id]
+        );
+        closedIds = closed.rows.map((r) => r.id);
+
+        for (const id of closedIds) {
+          await writeAudit(client, req.user.id, { ...claim, id }, {
+            status: 'rejected', ref: claim.ref, title: claim.item_title, claimId: id,
+            claimant: claim.claimant_name, reason: COMPETING_REASON, auto: true,
+          });
+        }
+      }
+
+      return { id: reviewed.id, status: reviewed.status, reviewedAt: reviewed.reviewed_at, closedIds };
     });
 
-    res.json({ claim: { id: result.id, status: result.status, reviewedAt: result.reviewed_at } });
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -90,7 +127,7 @@ claimsRouter.post('/:id/handover', requireAuth(STAFF), async (req, res, next) =>
       const { rows } = await client.query(
         `INSERT INTO handovers (item_id, claim_id, handed_over_by, identity_checked, identity_note)
          VALUES ($1, $2, $3, true, $4)
-         RETURNING id, handed_over_at`,
+         RETURNING id::int AS id, handed_over_at`,
         [claim.item_id, claim.id, req.user.id, identityNote]
       );
 
@@ -108,7 +145,9 @@ claimsRouter.post('/:id/handover', requireAuth(STAFF), async (req, res, next) =>
     });
 
     res.status(201).json({
-      handover: { id: handover.id, claimId: Number(req.params.id), handedOverAt: handover.handed_over_at },
+      id: handover.id,
+      claimId: Number(req.params.id),
+      handedOverAt: handover.handed_over_at,
     });
   } catch (err) {
     if (err.code === '23505') {

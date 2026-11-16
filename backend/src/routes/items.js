@@ -55,11 +55,14 @@ itemsRouter.get('/:ref/claims', requireAuth(STAFF), async (req, res, next) => {
     if (!item) throw new HttpError(404, `No item with reference ${req.params.ref}.`);
 
     const { rows: claims } = await query(
-      `SELECT c.id, c.status, c.description, c.identifying,
+      `SELECT c.id::int AS id, c.status, c.reason, c.auto_closed, c.reviewed_at, c.withdrawn_at,
+              c.description, c.identifying,
               c.lost_on::text AS lost_on, c.lost_where,
-              c.created_at, u.name AS claimant_name, u.email AS claimant_email, u.student_id AS claimant_student_id
+              c.created_at, u.name AS claimant_name, u.email AS claimant_email,
+              u.student_id AS claimant_student_id, h.handed_over_at
        FROM claims c
        JOIN users u ON u.id = c.user_id
+       LEFT JOIN handovers h ON h.claim_id = c.id
        WHERE c.item_id = $1
        ORDER BY c.created_at DESC`,
       [item.id]
@@ -70,6 +73,11 @@ itemsRouter.get('/:ref/claims', requireAuth(STAFF), async (req, res, next) => {
       claims: claims.map((c) => ({
         id: c.id,
         status: c.status,
+        reason: c.reason,
+        autoClosed: c.auto_closed,
+        reviewedAt: c.reviewed_at,
+        withdrawnAt: c.withdrawn_at,
+        handedOverAt: c.handed_over_at,
         claimant: { name: c.claimant_name, email: c.claimant_email, studentId: c.claimant_student_id },
         answers: { description: c.description, identifying: c.identifying, lostOn: c.lost_on, lostWhere: c.lost_where },
         submittedAt: c.created_at,
