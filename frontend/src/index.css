@@ -2815,3 +2815,183 @@ a.inventory__row:hover {
     display: none;
   }
 }
+
+/* ---------- Claim outcomes: reasons, withdraw, notifications ---------- */
+.logline__action--muted { color: var(--ink-soft); background: var(--card); border: 1px dashed var(--ink-soft); }
+
+.stamp--withdrawn {
+  color: var(--ink-soft);
+  border-color: var(--ink-soft);
+  border-style: dashed;
+}
+
+.reason {
+  margin: 1.25rem 0 0;
+  padding: 0.9rem 1rem;
+  background: var(--stamp-soft);
+  border-left: 4px solid var(--stamp);
+}
+
+.reason__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--stamp);
+}
+
+.reason p:last-child { margin-bottom: 0; }
+
+.reject-form {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.reject-form textarea {
+  font: inherit;
+  min-height: 4.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 2px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.reject-form textarea:focus {
+  outline: 3px solid var(--stamp);
+  outline-offset: 1px;
+}
+
+.reason-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.reason-pick {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border: 1.5px dashed var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.reason-pick:hover,
+.reason-pick:focus-visible {
+  background: var(--marker);
+  border-style: solid;
+}
+
+.reject-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.competing {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.7rem;
+  background: #fff3b8;
+  border-left: 3px solid #c99512;
+}
+
+.withdraw {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 2px dashed var(--ink-soft);
+}
+
+.withdraw h4 { margin: 0 0 0.35rem; }
+.withdraw p { margin: 0 0 0.75rem; }
+.withdraw__row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+.nav__link--badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--paper);
+  background: var(--stamp);
+  border-radius: 999px;
+  transform: rotate(-6deg);
+}
+
+.updates {
+  margin: 0 0 2rem;
+  padding: 1rem 1.2rem 1.1rem;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--marker);
+}
+
+.updates__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.updates__head h2 { margin: 0; font-size: 1.25rem; }
+
+.updates ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.updates li + li { border-top: 1px dashed var(--ink-soft); }
+
+.updates__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.8rem;
+  align-items: center;
+  padding: 0.6rem 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.updates__row:hover strong { text-decoration: underline; text-decoration-color: var(--stamp); }
+.updates__row .small { grid-column: 2; margin: 0; }
+
+.linkish {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.claim-row--new {
+  box-shadow: inset 4px 0 0 var(--stamp);
+}
+
+.new-flag {
+  margin-left: 0.4rem;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  color: var(--paper);
+  background: var(--stamp);
+  vertical-align: middle;
+}

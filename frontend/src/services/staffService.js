@@ -2,7 +2,7 @@
 // Each function names the endpoint it stands in for; request and response
 // shapes follow the backend so swapping in fetch() is a small change.
 
-import { KEYS, appendAudit, read, todayISO, wait, write } from "./mockDb.js";
+import { KEYS, appendAudit, notifyClaimsChanged, read, todayISO, wait, write } from "./mockDb.js";
 import { loadAllItems, toPublicItem } from "./itemsService.js";
 import { loadSession } from "../auth/authService.js";
 
@@ -68,7 +68,8 @@ export async function registerItem(input) {
 export async function listClaims() {
   await wait(250);
   const items = new Map(loadAllItems().map((i) => [i.ref, i]));
-  return read(KEYS.claims, [])
+  const all = read(KEYS.claims, []);
+  return all
     .map((c) => {
       const item = items.get(c.ref);
       const user = findUser(c.email);
@@ -77,6 +78,12 @@ export async function listClaims() {
         status: c.status,
         handedOverAt: c.handedOverAt ?? null,
         submittedAt: c.submittedAt,
+        reviewedAt: c.reviewedAt ?? null,
+        withdrawnAt: c.withdrawnAt ?? null,
+        reason: c.reason ?? null,
+        autoClosed: Boolean(c.autoClosed),
+        // Other claims still waiting on the same item — approving this one closes them.
+        otherPending: all.filter((o) => o.ref === c.ref && o.id !== c.id && o.status === "pending").length,
         claimant: {
           name: c.claimantName ?? user?.name ?? "Unknown student",
           email: c.email,
@@ -112,28 +119,71 @@ function updateClaim(id, patch) {
   return { ...claim, ...patch };
 }
 
-/** PATCH /api/claims/:id — approve or reject a pending claim. */
-export async function reviewClaim(id, status) {
+export const REJECT_REASONS = [
+  "Your description didn't match the item.",
+  "The detail only the owner would know didn't match.",
+  "We need to see you in person — please visit the help desk.",
+];
+
+export const COMPETING_REASON = "Another claim for this item was approved after an ID check.";
+
+/** PATCH /api/claims/:id — approve or reject a pending claim. A rejection needs a reason the student will see. */
+export async function reviewClaim(id, status, reason = "") {
   await wait(400);
   if (!["approved", "rejected"].includes(status)) throw new Error("Status must be approved or rejected.");
   const current = read(KEYS.claims, []).find((c) => c.id === id);
   if (!current) throw new Error("No claim with that id.");
   if (current.status !== "pending") throw new Error(`This claim was already ${current.status}.`);
+  const why = reason.trim();
+  if (status === "rejected" && why.length < 5) throw new Error("Tell the student why — they'll see this reason.");
 
-  const claim = updateClaim(id, { status, reviewedAt: new Date().toISOString() });
-  if (status === "approved") {
-    // An approved claim reserves the item, unless it is already spoken for.
-    const item = loadAllItems().find((i) => i.ref === claim.ref);
-    if (item?.status === "available") setItemStatus(claim.ref, "claimed");
+  const item = loadAllItems().find((i) => i.ref === current.ref);
+  if (status === "approved" && item && item.status !== "available") {
+    throw new Error("This item is already reserved or returned — another claim was approved.");
   }
+
+  const reviewedAt = new Date().toISOString();
+  const actor = loadSession();
+  const claim = updateClaim(id, { status, reviewedAt, reason: status === "rejected" ? why : null });
   appendAudit({
-    actor: loadSession(),
+    actor,
     action: "claim.reviewed",
     entity: "claim",
     entityId: claim.id,
-    detail: { status, ref: claim.ref, title: claim.itemTitle, claimant: claim.claimantName ?? claim.email },
+    detail: {
+      status,
+      ref: claim.ref,
+      title: claim.itemTitle,
+      claimant: claim.claimantName ?? claim.email,
+      reason: status === "rejected" ? why : undefined,
+    },
   });
-  return { id: claim.id, status: claim.status, reviewedAt: claim.reviewedAt };
+
+  let closed = [];
+  if (status === "approved") {
+    // An approved claim reserves the item, and every other open claim on it is closed with a reason.
+    setItemStatus(claim.ref, "claimed");
+    closed = read(KEYS.claims, []).filter((c) => c.ref === claim.ref && c.id !== id && c.status === "pending");
+    closed.forEach((c) => {
+      updateClaim(c.id, { status: "rejected", reviewedAt, reason: COMPETING_REASON, autoClosed: true });
+      appendAudit({
+        actor,
+        action: "claim.reviewed",
+        entity: "claim",
+        entityId: c.id,
+        detail: {
+          status: "rejected",
+          ref: c.ref,
+          title: c.itemTitle,
+          claimant: c.claimantName ?? c.email,
+          reason: COMPETING_REASON,
+          auto: true,
+        },
+      });
+    });
+  }
+  notifyClaimsChanged();
+  return { id: claim.id, status: claim.status, reviewedAt, closedIds: closed.map((c) => c.id) };
 }
 
 /** POST /api/claims/:id/handover — needs an approved claim and a recorded identity check. */
@@ -149,6 +199,7 @@ export async function recordHandover(id, { identityChecked, identityNote }) {
   const handedOverAt = new Date().toISOString();
   updateClaim(id, { handedOverAt, identityNote: identityNote?.trim() || null });
   setItemStatus(current.ref, "handed_over");
+  notifyClaimsChanged();
   appendAudit({
     actor: loadSession(),
     action: "item.handed_over",

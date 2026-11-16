@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
-import { colorFor, formatDate, getMyClaim } from "../services/itemsService.js";
+import { colorFor, formatDate, getMyClaim, markClaimsSeen, withdrawClaim } from "../services/itemsService.js";
 
 const when = (iso) =>
   iso
@@ -9,6 +9,12 @@ const when = (iso) =>
     : null;
 
 function buildSteps(claim) {
+  if (claim.status === "withdrawn") {
+    return [
+      { key: "filed", title: "Claim filed", text: "Your answers went to the help desk.", at: claim.submittedAt, state: "done" },
+      { key: "withdrawn", title: "Withdrawn by you", text: "The desk won't review this claim.", at: claim.withdrawnAt, state: "bad" },
+    ];
+  }
   const rejected = claim.status === "rejected";
   const approved = claim.status === "approved" || claim.status === "returned";
   const returned = claim.status === "returned";
@@ -18,7 +24,7 @@ function buildSteps(claim) {
       key: "review",
       title: rejected ? "Not approved" : "Checked by staff",
       text: rejected
-        ? "Staff couldn't match your answers to the item."
+        ? claim.reason ?? "Staff couldn't match your answers to the item."
         : approved
           ? "Your answers matched the desk's record."
           : "Staff are comparing your answers with what they logged.",
@@ -47,10 +53,32 @@ export default function ClaimDetail() {
   const { user } = useAuth();
   const [claim, setClaim] = useState(null);
   const [missing, setMissing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getMyClaim(user.email, id).then(setClaim).catch(() => setMissing(true));
+    getMyClaim(user.email, id)
+      .then((c) => {
+        setClaim(c);
+        markClaimsSeen(user.email, [c.id]); // opening the claim clears its notification
+      })
+      .catch(() => setMissing(true));
   }, [id, user.email]);
+
+  async function handleWithdraw() {
+    setBusy(true);
+    setError("");
+    try {
+      await withdrawClaim(user, claim.id);
+      setClaim(await getMyClaim(user.email, claim.id));
+      setConfirming(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (missing) {
     return (
@@ -81,6 +109,8 @@ export default function ClaimDetail() {
             <>Case <em>closed.</em></>
           ) : claim.status === "rejected" ? (
             <>Not <em>approved.</em></>
+          ) : claim.status === "withdrawn" ? (
+            <><em>Withdrawn.</em></>
           ) : ready ? (
             <>Ready for <em>pickup.</em></>
           ) : (
@@ -99,6 +129,13 @@ export default function ClaimDetail() {
             </li>
           </ul>
           <p className="small">Staff check your ID before handing anything over.</p>
+        </div>
+      )}
+
+      {claim.status === "rejected" && (
+        <div className="reason" role="note">
+          <p className="reason__label mono">Why the desk said no</p>
+          <p>{claim.reason ?? "Staff couldn't match your answers to the item."}</p>
         </div>
       )}
 
@@ -147,6 +184,36 @@ export default function ClaimDetail() {
           </section>
         </aside>
       </div>
+
+      {claim.status === "pending" && (
+        <section className="withdraw">
+          <h4>Found it somewhere else?</h4>
+          <p className="small muted">
+            You can withdraw this claim while it's waiting for review. The desk will stop checking it.
+          </p>
+          {error && <div className="alert alert--error" role="alert">{error}</div>}
+          {!confirming ? (
+            <button type="button" className="btn btn--ghost" onClick={() => setConfirming(true)}>
+              Withdraw this claim
+            </button>
+          ) : (
+            <div className="withdraw__row">
+              <button type="button" className="btn btn--stamp" disabled={busy} onClick={handleWithdraw}>
+                {busy ? "Withdrawing…" : "Yes, withdraw it"}
+              </button>
+              <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setConfirming(false)}>
+                Keep my claim
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {claim.status === "withdrawn" && claim.item?.status === "available" && (
+        <p className="note mono">
+          Changed your mind? The item is still on the rack — <Link to={`/items/${claim.item.ref}/claim`}>claim it again</Link>.
+        </p>
+      )}
 
       {claim.status === "rejected" && (
         <p className="note mono">

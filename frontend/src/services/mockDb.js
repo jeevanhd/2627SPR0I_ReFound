@@ -9,7 +9,14 @@ export const KEYS = {
   itemStatus: "refound.mockItemStatus", // status overrides for the seed items
   refSeq: "refound.mockRefSeq",
   audit: "refound.mockAudit", // mirrors the backend audit_log table
+  seen: "refound.mockSeen", // claim updates each student has already seen
 };
+
+/** Fired whenever claims change, so the navbar badge can refresh. */
+export const CLAIMS_CHANGED = "refound:claims-changed";
+export function notifyClaimsChanged() {
+  window.dispatchEvent(new Event(CLAIMS_CHANGED));
+}
 
 /** Append an audit entry. Same idea as the INSERT INTO audit_log calls in the backend. */
 export function appendAudit({ actor, action, entity, entityId, detail = {} }) {

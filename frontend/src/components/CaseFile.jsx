@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDate } from "../services/itemsService.js";
-import { recordHandover, reviewClaim } from "../services/staffService.js";
+import { REJECT_REASONS, recordHandover, reviewClaim } from "../services/staffService.js";
 
 // One claim as a manila case file: claimant, their answers, the private record, and actions.
 export default function CaseFile({ claim, onChange }) {
@@ -9,6 +9,8 @@ export default function CaseFile({ claim, onChange }) {
   const [error, setError] = useState("");
   const [idChecked, setIdChecked] = useState(false);
   const [idNote, setIdNote] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
   const { item, claimant, answers } = claim;
 
   async function run(action) {
@@ -79,15 +81,86 @@ export default function CaseFile({ claim, onChange }) {
 
       {error && <div className="alert alert--error" role="alert">{error}</div>}
 
-      {claim.status === "pending" && (
+      {claim.status === "pending" && !rejecting && (
         <footer className="casefile__actions">
-          <button type="button" className="btn btn--ink" disabled={busy} onClick={() => run(() => reviewClaim(claim.id, "approved"))}>
+          {claim.otherPending > 0 && (
+            <p className="competing mono">
+              {claim.otherPending} other claim{claim.otherPending === 1 ? " is" : "s are"} waiting on this item.
+              Approving this one closes {claim.otherPending === 1 ? "it" : "them"} and tells{" "}
+              {claim.otherPending === 1 ? "that student" : "those students"} why.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn btn--ink"
+            disabled={busy || (item.status && item.status !== "available")}
+            onClick={() => run(() => reviewClaim(claim.id, "approved"))}
+          >
             ✓ Approve
           </button>
-          <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => run(() => reviewClaim(claim.id, "rejected"))}>
-            ✗ Reject
+          <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setRejecting(true)}>
+            ✗ Reject…
           </button>
         </footer>
+      )}
+
+      {claim.status === "pending" && rejecting && (
+        <footer className="casefile__actions">
+          <form
+            className="reject-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(() => reviewClaim(claim.id, "rejected", reason));
+            }}
+          >
+            <label htmlFor={`reason-${claim.id}`} className="mono small">
+              Why are you rejecting it? <span className="muted">The student will see this.</span>
+            </label>
+            <div className="reason-picks">
+              {REJECT_REASONS.map((r) => (
+                <button key={r} type="button" className="reason-pick" onClick={() => setReason(r)}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <textarea
+              id={`reason-${claim.id}`}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Keep it kind and don't reveal the private details of the item."
+              maxLength={240}
+            />
+            <div className="reject-form__row">
+              <button type="submit" className="btn btn--stamp" disabled={busy || reason.trim().length < 5}>
+                Reject with this reason
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                disabled={busy}
+                onClick={() => {
+                  setRejecting(false);
+                  setError("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </footer>
+      )}
+
+      {claim.status === "rejected" && claim.reason && (
+        <div className="reason">
+          <p className="reason__label mono">{claim.autoClosed ? "Closed automatically" : "Reason given to the student"}</p>
+          <p>{claim.reason}</p>
+        </div>
+      )}
+
+      {claim.status === "withdrawn" && (
+        <p className="casefile__closed mono small">
+          Withdrawn by the student{claim.withdrawnAt ? ` on ${formatDate(claim.withdrawnAt)}` : ""}. Nothing to do.
+        </p>
       )}
 
       {claim.status === "approved" && !claim.handedOverAt && (
