@@ -31,6 +31,8 @@ npm start                     # http://localhost:3000
 | GET | `/api/items/:ref/claims` | staff | Read claims **with** the private answers |
 | PATCH | `/api/claims/:id` | staff | Approve or reject a pending claim |
 | POST | `/api/claims/:id/handover` | staff | Record a handover after an identity check |
+| GET | `/api/staff/items` | staff | Every record, returned ones included, with claim counts and the private note |
+| GET | `/api/staff/claims?status=` | staff | The review queue, with the private answers and item detail |
 | GET | `/api/audit?action=&q=&limit=` | supervisor | Read the audit history, newest first |
 | GET | `/api/health` | anyone | Liveness check |
 
@@ -44,6 +46,11 @@ npm start                     # http://localhost:3000
   `private_note` is not in it. Claim answers are returned only on the staff route.
 - **A handover needs an approved claim and a recorded identity check.** Both are
   refused with a 409/400 rather than a warning.
+- **A rejection must carry a reason.** The student reads it, so a blank reason is a
+  400, not a silent rejection.
+- **Approving one claim closes the others on that item.** They are marked
+  `auto_closed` with a reason the student can read, and the item cannot be approved
+  twice — an already-reserved item is a 409.
 - **Reference codes are unique and sequential** (`RF-0149`), allocated from a
   PostgreSQL sequence inside the same transaction as the insert.
 - **Every staff action is audited** into `audit_log`, with the item title and

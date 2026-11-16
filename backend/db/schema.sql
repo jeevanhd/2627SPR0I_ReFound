@@ -43,13 +43,28 @@ CREATE TABLE IF NOT EXISTS claims (
   lost_on     date,
   lost_where  text,
   status      text        NOT NULL DEFAULT 'pending'
-                          CHECK (status IN ('pending', 'approved', 'rejected')),
+                          CHECK (status IN ('pending', 'approved', 'rejected', 'withdrawn')),
+  -- Set when the student withdraws their own claim before review.
+  withdrawn_at timestamptz,
+  -- Why a claim was rejected. The student reads this, so it is never blank.
+  reason      text,
+  -- True when the claim was closed automatically because another claim won.
+  auto_closed boolean     NOT NULL DEFAULT false,
   reviewed_by bigint      REFERENCES users(id),
   reviewed_at timestamptz,
   created_at  timestamptz NOT NULL DEFAULT now(),
   -- One claim per student per item.
   UNIQUE (item_id, user_id)
 );
+
+-- For databases created before these columns existed.
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS reason text;
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS auto_closed boolean NOT NULL DEFAULT false;
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS withdrawn_at timestamptz;
+-- Widen the status check so a withdrawn claim is a valid state.
+ALTER TABLE claims DROP CONSTRAINT IF EXISTS claims_status_check;
+ALTER TABLE claims ADD CONSTRAINT claims_status_check
+  CHECK (status IN ('pending', 'approved', 'rejected', 'withdrawn'));
 
 CREATE TABLE IF NOT EXISTS handovers (
   id               bigserial   PRIMARY KEY,

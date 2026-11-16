@@ -14,6 +14,7 @@ const ACTION_FILTERS = {
   'claim.submitted': `a.action = 'claim.submitted'`,
   'claim.approved': `a.action = 'claim.reviewed' AND a.detail->>'status' = 'approved'`,
   'claim.rejected': `a.action = 'claim.reviewed' AND a.detail->>'status' = 'rejected'`,
+  'claim.withdrawn': `a.action = 'claim.withdrawn'`,
   'item.handed_over': `a.action = 'item.handed_over'`,
 };
 
@@ -52,7 +53,7 @@ auditRouter.get('/', requireAuth(['supervisor']), async (req, res, next) => {
 
     params.push(limit);
     const { rows } = await query(
-      `SELECT a.id, a.action, a.entity, a.entity_id, a.detail, a.created_at,
+      `SELECT a.id::int AS id, a.action, a.entity, a.entity_id, a.detail, a.created_at,
               u.name AS actor_name, u.role AS actor_role, u.email AS actor_email
        FROM audit_log a
        LEFT JOIN users u ON u.id = a.actor_id
