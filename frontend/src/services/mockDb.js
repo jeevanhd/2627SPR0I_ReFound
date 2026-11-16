@@ -43,6 +43,16 @@ export function write(key, value) {
   }
 }
 
+/** Wipe every mock record and sign out — handy before a demo. Dev builds only. */
+export function resetDemoData() {
+  try {
+    Object.values(KEYS).forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem("refound.session");
+  } catch {
+    // ignore
+  }
+}
+
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);

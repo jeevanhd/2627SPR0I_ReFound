@@ -44,7 +44,7 @@ export default function MyClaims() {
                   {c.id} · filed {formatDate(c.submittedAt.slice(0, 10))}
                 </p>
                 <h3>
-                  <Link to={`/items/${c.ref}`}>{c.itemTitle}</Link> <span className="mono small muted">{c.ref}</span>
+                  <Link to={`/claims/${c.id}`}>{c.itemTitle}</Link> <span className="mono small muted">{c.ref}</span>
                 </h3>
                 <p className="muted small">{STATUS_TEXT[c.status]}</p>
               </div>

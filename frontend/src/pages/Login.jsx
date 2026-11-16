@@ -111,6 +111,8 @@ export default function Login() {
         {role === "student" ? (
           <p className="auth__switch">
             New here? <Link to="/signup">Create a student account</Link>
+            <br />
+            <Link to="/help#password" className="small">Forgot your password?</Link>
           </p>
         ) : (
           <p className="auth__switch muted small">

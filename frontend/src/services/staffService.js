@@ -166,6 +166,40 @@ export async function recordHandover(id, { identityChecked, identityNote }) {
   return { id: `HO-${Date.now().toString().slice(-6)}`, claimId: id, handedOverAt };
 }
 
+export const LONG_UNCLAIMED_DAYS = 14;
+
+export function daysSince(isoDate) {
+  const start = new Date(`${isoDate.slice(0, 10)}T00:00:00`);
+  const today = new Date(`${todayISO()}T00:00:00`);
+  return Math.max(0, Math.round((today - start) / 86400000));
+}
+
+/** Every record, including returned ones, with claim counts. Staff-only (has privateNote). */
+export async function listInventory() {
+  // TODO(backend): GET /api/staff/items (not built yet)
+  await wait(200);
+  const claims = read(KEYS.claims, []);
+  return loadAllItems()
+    .map((item) => {
+      const mine = claims.filter((c) => c.ref === item.ref);
+      return {
+        ...item,
+        daysOnRack: daysSince(item.foundOn),
+        claimsCount: mine.length,
+        pendingCount: mine.filter((c) => c.status === "pending").length,
+      };
+    })
+    .sort((a, b) => b.foundOn.localeCompare(a.foundOn) || b.ref.localeCompare(a.ref));
+}
+
+/** One full record plus every claim on it. Mirrors GET /api/items/:ref/claims. */
+export async function getStaffItem(ref) {
+  const item = loadAllItems().find((i) => i.ref.toLowerCase() === String(ref).toLowerCase());
+  if (!item) throw new Error("not-found");
+  const claims = (await listClaims()).filter((c) => c.item.ref === item.ref);
+  return { item: { ...item, daysOnRack: daysSince(item.foundOn) }, claims };
+}
+
 /** Numbers for the desk overview (no single endpoint yet — derived from the lists). */
 export async function getDeskSummary() {
   const claims = await listClaims();
@@ -175,6 +209,7 @@ export async function getDeskSummary() {
     pending: claims.filter((c) => c.status === "pending").length,
     awaitingHandover: claims.filter((c) => c.status === "approved" && !c.handedOverAt).length,
     returned: items.filter((i) => i.status === "handed_over").length,
+    longUnclaimed: items.filter((i) => i.status === "available" && daysSince(i.foundOn) >= LONG_UNCLAIMED_DAYS).length,
     queue: claims.filter((c) => c.status === "pending").slice(0, 5),
     recentItems: read(KEYS.items, []).slice(0, 4).map(toPublicItem),
   };

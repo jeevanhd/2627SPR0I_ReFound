@@ -86,6 +86,21 @@ export async function getMyClaims(email) {
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 }
 
+/** One of the signed-in student's own claims (their answers are theirs to see). */
+export async function getMyClaim(email, id) {
+  // TODO(backend): GET /api/claims/mine/:id
+  await wait(200);
+  const claim = read(KEYS.claims, []).find((c) => c.id === id && c.email === email);
+  if (!claim) throw new Error("not-found");
+  const item = loadAllItems().find((i) => i.ref === claim.ref);
+  return { ...claim, status: displayStatus(claim), item: item ? toPublicItem(item) : null };
+}
+
+/** Newest items still on the rack, for the student home page. */
+export async function latestItems(count = 4) {
+  return (await searchItems()).slice(0, count);
+}
+
 /** Submit a private ownership claim. Only staff will ever see the answers. */
 export async function submitClaim({ item, user, description, identifying, lostOn, lostWhere }) {
   // TODO(backend): POST /api/items/:ref/claims (server checks the user is a signed-in student)

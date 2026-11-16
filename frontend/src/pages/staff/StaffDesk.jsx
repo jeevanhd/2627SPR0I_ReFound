@@ -15,8 +15,8 @@ export default function StaffDesk() {
   const stats = summary && [
     { label: "Claims to review", value: summary.pending, to: "/staff/claims?tab=pending", tone: "stamp" },
     { label: "Waiting for pickup", value: summary.awaitingHandover, to: "/staff/claims?tab=approved", tone: "sky" },
-    { label: "Items on the rack", value: summary.onRack, to: "/items", tone: "marker" },
-    { label: "Returned to owners", value: summary.returned, to: "/staff/claims?tab=returned", tone: "rose" },
+    { label: "Items on the rack", value: summary.onRack, to: "/staff/items", tone: "marker" },
+    { label: "Returned to owners", value: summary.returned, to: "/staff/items?status=handed_over", tone: "rose" },
   ];
 
   return (
@@ -48,6 +48,12 @@ export default function StaffDesk() {
         <p className="mono muted">Opening the ledger…</p>
       ) : (
         <>
+          {summary.longUnclaimed > 0 && (
+            <Link to="/staff/items?status=long" className="note mono desk__aging">
+              {summary.longUnclaimed} item{summary.longUnclaimed === 1 ? " has" : "s have"} been on the rack 2+ weeks
+              without a claim →
+            </Link>
+          )}
           <div className="counters">
             {stats.map((s) => (
               <Link key={s.label} to={s.to} className={`counter counter--${s.tone}`}>
@@ -92,7 +98,7 @@ export default function StaffDesk() {
                 <ul className="ledger__list">
                   {summary.recentItems.map((i) => (
                     <li key={i.ref}>
-                      <Link to={`/items/${i.ref}`} className="ledger__row">
+                      <Link to={`/staff/items/${i.ref}`} className="ledger__row">
                         <span className="mono small">{i.ref}</span>
                         <span className="ledger__what">
                           <strong>{i.title}</strong>
