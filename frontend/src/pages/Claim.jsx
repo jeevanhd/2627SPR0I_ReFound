@@ -168,7 +168,7 @@ function Receipt({ claim }) {
         </p>
         <span className="stamp stamp--receipt" aria-hidden="true">Received</span>
         <div className="receipt__actions">
-          <Link to="/claims" className="btn btn--ink">My claims</Link>
+          <Link to={`/claims/${claim.id}`} className="btn btn--ink">Track this claim</Link>
           <Link to="/items" className="btn btn--ghost">Back to the register</Link>
         </div>
       </div>

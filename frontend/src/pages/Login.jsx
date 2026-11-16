@@ -36,8 +36,9 @@ export default function Login() {
 
     setSubmitting(true);
     try {
-      await login({ ...form, role });
-      navigate(location.state?.from ?? "/welcome", { replace: true });
+      const signedIn = await login({ ...form, role });
+      const home = signedIn.role === "student" ? "/welcome" : "/staff";
+      navigate(location.state?.from ?? home, { replace: true });
     } catch (err) {
       setFormError(err.message);
     } finally {
@@ -110,10 +111,13 @@ export default function Login() {
         {role === "student" ? (
           <p className="auth__switch">
             New here? <Link to="/signup">Create a student account</Link>
+            <br />
+            <Link to="/help#password" className="small">Forgot your password?</Link>
           </p>
         ) : (
           <p className="auth__switch muted small">
-            Staff accounts are created by your supervisor. Demo: <code>staff@campus.edu</code> with any password.
+            Staff accounts are created by your supervisor. Demo: <code>staff@campus.edu</code> or{" "}
+            <code>supervisor@campus.edu</code> with any password.
           </p>
         )}
       </Ticket>
