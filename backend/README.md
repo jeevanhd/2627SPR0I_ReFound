@@ -18,6 +18,40 @@ npm run seed:items            # optional: the 24 sample records the UI ships wit
 npm start                     # http://localhost:3000
 ```
 
+## Run it with Docker
+
+The [Dockerfile](Dockerfile) builds a lean runtime image. From the repo root:
+
+```bash
+docker build -t sprint-service:local backend
+docker image ls sprint-service:local
+
+# needs a reachable PostgreSQL; values come from your shell, never from the image
+docker run --rm -p 3000:3000 \
+  -e DATABASE_URL=postgres://refound:refound@host.docker.internal:5432/refound \
+  -e JWT_SECRET=<at-least-32-random-characters> \
+  sprint-service:local sh -c "npm run db:init && node src/server.js"
+```
+
+Then `curl http://localhost:3000/api/health` should return `{"ok":true}`.
+
+| | Size |
+| --- | --- |
+| `sprint-service:local` (what a classmate pulls) | **48.7 MB** content, 198 MB on disk |
+| `node:20.18.1` full base alone, for comparison | 414 MB content, 1.59 GB on disk |
+
+What is left out, and why it was a risk:
+
+- **Heavy base.** `node:20.18.1-alpine3.20` instead of the full Debian `node:20.18.1`. The full
+  tag ships compilers, `python3` and `make` for native modules; we have none (`bcryptjs` is pure JS).
+- **Build tools and caches.** `npm ci --omit=dev` installs only runtime dependencies from the pinned
+  `package-lock.json`, then `npm cache clean --force` drops the download cache.
+- **Unused files.** [.dockerignore](.dockerignore) keeps `test/`, `README.md`, local `node_modules/`
+  and `.env` out of the build context, so no secret or test fixture can be copied in.
+
+Kept on purpose: `package.json` + `package-lock.json` (pinned deps), `db/schema.sql` (needed by
+`npm run db:init`), `scripts/` (staff seeding). A classmate pull on campus Wi-Fi was **not measured**.
+
 `npm test` runs the unit tests, and the integration tests too when
 `DATABASE_URL` is set — without it they are skipped rather than silently passing.
 
