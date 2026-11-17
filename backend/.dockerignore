@@ -1,0 +1,13 @@
+# Keep the build context to what the image actually runs.
+node_modules
+npm-debug.log
+*.log
+.env
+.env.*
+!.env.example
+test
+README.md
+.git
+.gitignore
+Dockerfile
+.dockerignore
