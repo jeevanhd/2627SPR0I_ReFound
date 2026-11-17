@@ -14,6 +14,7 @@ cp .env.example .env          # fill in DATABASE_URL and JWT_SECRET
 npm install
 npm run db:init               # apply db/schema.sql (safe to re-run)
 npm run seed:staff            # creates the staff account from .env
+npm run seed:items            # optional: the 24 sample records the UI ships with
 npm start                     # http://localhost:3000
 ```
 
@@ -57,6 +58,14 @@ npm start                     # http://localhost:3000
   claimant name in `detail` so the logbook can describe an event without a join.
 - **The audit history is supervisor-only.** A desk volunteer can act on records
   but cannot read the history of who did what.
+
+## Sample data
+
+`npm run seed:items` loads `db/sample-items.json` — the same 24 records the
+frontend ships in `src/data/items.js` — so the staff inventory and the student
+listing show the same rack instead of one being empty. It is idempotent (existing
+refs are skipped) and it advances `item_ref_seq` past any ref already used, so a
+newly registered item can never collide with a seeded one.
 
 ## What is not built yet
 

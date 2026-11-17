@@ -1,8 +1,6 @@
-// Audit log reader for supervisors — FRONTEND MOCK.
-// TODO(backend): GET /api/audit?action=&q= (supervisor only). The backend already
-// writes audit_log rows; it does not expose a read endpoint yet.
+// Audit log reader for supervisors — reads GET /api/audit (supervisor only).
 
-import { KEYS, read, wait } from "./mockDb.js";
+import { api } from "../api/client.js";
 
 export const ACTIONS = {
   "item.registered": { label: "Item logged", tone: "marker" },
@@ -40,15 +38,14 @@ export function describe(entry) {
   }
 }
 
+/** Filtering happens on the server, over the same fields the logbook searches. */
 export async function listAudit({ action = "", q = "" } = {}) {
-  await wait(200);
-  const needle = q.trim().toLowerCase();
-  return read(KEYS.audit, []).filter((e) => {
-    if (action && actionKey(e) !== action) return false;
-    if (!needle) return true;
-    const hay = `${e.entityId} ${e.detail?.ref ?? ""} ${e.detail?.title ?? ""} ${e.detail?.claimant ?? ""} ${e.actor?.name ?? ""} ${e.actor?.email ?? ""} ${e.detail?.reason ?? ""}`.toLowerCase();
-    return hay.includes(needle);
-  });
+  const params = new URLSearchParams();
+  if (action) params.set("action", action);
+  if (q.trim()) params.set("q", q.trim());
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const { entries } = await api(`/api/audit${suffix}`);
+  return entries;
 }
 
 /** CSV of the given entries, for supervisors to keep or share with administration. */

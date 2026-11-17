@@ -47,6 +47,7 @@ auditRouter.get('/', requireAuth(['supervisor']), async (req, res, next) => {
         OR a.detail->>'ref' ILIKE ${p}
         OR a.detail->>'title' ILIKE ${p}
         OR a.detail->>'claimant' ILIKE ${p}
+        OR a.detail->>'reason' ILIKE ${p}
         OR u.name ILIKE ${p}
         OR u.email ILIKE ${p})`);
     }

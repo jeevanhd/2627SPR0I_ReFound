@@ -67,3 +67,17 @@ endpoint yet.
 
 Mocks never store passwords. Role checks in the UI only hide screens — the server
 must enforce them.
+
+## Pointing the UI at the API
+
+The staff desk, the logbook and sign-in talk to the backend over HTTP. Copy
+`.env.example` to `.env.local` and set `VITE_API_URL` (defaults to
+`http://localhost:3000`):
+
+```
+VITE_API_URL=http://localhost:3000
+```
+
+Start the backend first (`cd ../backend && npm start`), otherwise the screens
+report that they cannot reach the API. The student listing, item detail and claim
+form still read the bundled sample data until the public API lands.
