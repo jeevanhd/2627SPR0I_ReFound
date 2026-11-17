@@ -30,7 +30,12 @@ Owner is either **Provider** (Render) or **Team: one named student**. A **Split*
 | Secrets and config | **Team: Danushri Prakash** | Stored in **Render → Service → Environment** (`DATABASE_URL`, `JWT_SECRET`, `STAFF_*`). Variable names only, documented in [backend/.env.example](../backend/.env.example). `.env` is git-ignored ([.gitignore](../.gitignore)). Render's model: customers own *"Protecting all secrets within their organization."* |
 | Application code | **Team: Danushri Prakash** (primary), Jeevan_HD (secondary) | [backend/src/](../backend/src/) and [frontend/src/](../frontend/src/). Render's model: customers own *"Security of application-level configurations"* and *"Regular security assessments of their applications."* |
 
-Every Team row names a student. Each named owner confirms their rows by approving or commenting on this pull request.
+Every Team row names a student. Each named owner confirms their rows in the pull request discussion:
+
+| Owner | Rows they confirm | Where |
+|---|---|---|
+| Danushri Prakash | Secrets and config, Application code | Comment on PR #17 and on this follow-up PR |
+| Jeevan_HD | Database backups, Network allow-list, Application code (secondary) | Comment and approval on this follow-up PR |
 
 ## What we would have wrongly assumed
 
@@ -40,10 +45,12 @@ Our first guess was "Render handles the database, so Render keeps it safe." That
 
 The API and the database both run in **Render Singapore**, the nearest of Render's five regions (Oregon, Ohio, Virginia, Frankfurt, Singapore) to our campus users in India. They must share a region. Render gives *"each region … a separate private network,"* and the API reaches Postgres over the internal URL only within the same region. Render also *"doesn't currently support changing the region for an existing service or database,"* so this is chosen once at creation. The frontend is a static site, which Render serves from a global CDN with no region.
 
-Measured connect time from the campus network:
+The region is fixed in code, not just in the dashboard: [render.yaml](../render.yaml) sets `region: singapore` on both the API and the database, so a redeploy can't drift to another region.
 
-```sh
-curl -o /dev/null -s -w '%{time_connect}\n' https://<refound-api>.onrender.com
+Measured connect time from the campus network, using [Docs/measure-connect.ps1](measure-connect.ps1). It wakes the free service first (free web services spin down after 15 minutes without traffic), then times five TCP connects to `/api/health` and reports the median:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Docs/measure-connect.ps1 https://refound-api.onrender.com
 ```
 
-**Result: `TODO — fill in after the first deploy` s** (measured on campus Wi-Fi, <date>). Free web services spin down after 15 minutes without traffic, so take the measurement after one warm-up request.
+**Result: `MEASURED_VALUE` s** (median of 5, campus Wi-Fi, MEASURED_DATE).
