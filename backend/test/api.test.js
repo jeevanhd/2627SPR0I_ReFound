@@ -451,6 +451,39 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
     assert.match(tooLate.body.error, /already reserved or returned/);
   });
 
+  await t.test('seeding the sample items is idempotent and cannot collide with new refs', async () => {
+    const { spawnSync } = await import('node:child_process');
+    const { fileURLToPath } = await import('node:url');
+    const backendRoot = fileURLToPath(new URL('..', import.meta.url));
+    const seed = () => spawnSync('node', ['scripts/seed-items.js'], { cwd: backendRoot, env: process.env, encoding: 'utf8' });
+
+    const count = async () => Number((await pool.query('SELECT COUNT(*)::int AS n FROM items')).rows[0].n);
+    const before = await count();
+
+    const first = seed();
+    assert.equal(first.status, 0, first.stderr);
+    const afterFirst = await count();
+    assert.equal(afterFirst, before + 24, 'the whole sample rack lands');
+
+    const second = seed();
+    assert.equal(second.status, 0, second.stderr);
+    assert.equal(await count(), afterFirst, 'running it twice adds nothing');
+    assert.match(second.stdout, /0 added, 24 already present/);
+
+    const inventory = await request('/api/staff/items', { token: staffToken });
+    const seeded = inventory.body.items.find((i) => i.ref === 'RF-0148');
+    assert.ok(seeded, 'a seeded record is visible to the desk');
+    assert.equal(seeded.privateNote, 'Serial number on the base.');
+
+    const fresh = await request('/api/items', {
+      method: 'POST', token: staffToken,
+      body: { title: 'After seeding', description: 'Proves the sequence moved.', category: 'Keys', location: 'Library' },
+    });
+    assert.equal(fresh.status, 201);
+    const refNumber = Number(fresh.body.item.ref.replace(/\D/g, ''));
+    assert.ok(refNumber > 148, `a new ref (${fresh.body.item.ref}) must not collide with a seeded one`);
+  });
+
   await t.test('an unknown route is a clean 404', async () => {
     const res = await request('/api/nope');
     assert.equal(res.status, 404);

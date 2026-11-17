@@ -1,73 +1,37 @@
-// Auth service — FRONTEND MOCK.
+// Auth against the real API.
 //
-// There is no backend yet. These functions simulate the API so the screens can
-// be built and tested. When the Express auth API exists, replace the bodies of
-// signup() and login() with real fetch() calls — the screens do not need to change.
-//
-// Passwords are never stored by this mock. Only the signed-in user's public
-// profile (name, email, role) is kept for the session.
+// The exported functions are the same ones the screens already call, so no page
+// changed when the mock was replaced. The token comes back from the API and is
+// held by api/client.js; only the public profile is kept here.
+
+import { api, setToken } from "../api/client.js";
 
 const SESSION_KEY = "refound.session";
-const MOCK_USERS_KEY = "refound.mockUsers";
-const FAKE_DELAY_MS = 600;
-
-// Demo staff accounts so the Staff tab can be tried before the backend exists.
-const DEMO_STAFF = [
-  { name: "Help Desk", email: "staff@campus.edu", role: "staff" },
-  { name: "Desk Supervisor", email: "supervisor@campus.edu", role: "supervisor" },
-];
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function readMockUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(MOCK_USERS_KEY)) ?? [];
-  } catch {
-    return [];
-  }
-}
-
-function writeMockUsers(users) {
-  try {
-    localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users));
-  } catch {
-    // Storage unavailable (private mode) — the mock still works for this page load.
-  }
-}
 
 /** Register a student. Resolves with the new user's public profile. */
-export async function signup({ name, studentId, email }) {
-  // TODO(backend): POST /api/auth/signup { name, studentId, email, password }
-  await wait(FAKE_DELAY_MS);
-  const users = readMockUsers();
-  const normalized = email.trim().toLowerCase();
-  if (users.some((u) => u.email === normalized)) {
-    throw new Error("An account with this email already exists. Try logging in.");
-  }
-  const user = { name: name.trim(), studentId: studentId.trim(), email: normalized, role: "student" };
-  writeMockUsers([...users, user]);
+export async function signup({ name, studentId, email, password }) {
+  const { user, token } = await api("/api/auth/signup", {
+    method: "POST",
+    body: { name, studentId, email, password },
+  });
+  setToken(token);
   return user;
 }
 
 /** Log in as a student or staff member. Resolves with the user's public profile. */
-export async function login({ email, role }) {
-  // TODO(backend): POST /api/auth/login { email, password, role }
-  // The real API must check the role on the server, not trust the client.
-  await wait(FAKE_DELAY_MS);
-  const normalized = email.trim().toLowerCase();
+export async function login({ email, password, role }) {
+  const { user, token } = await api("/api/auth/login", {
+    method: "POST",
+    body: { email, password },
+  });
 
-  if (role === "staff") {
-    const staff = DEMO_STAFF.find((s) => s.email === normalized);
-    if (!staff) {
-      throw new Error("Staff accounts are created by the help desk. Check your email or contact your supervisor.");
-    }
-    return staff;
+  // The API decides the role. A student account cannot come in through the staff tab.
+  if (role === "staff" && user.role === "student") {
+    setToken(null);
+    throw new Error("Staff accounts are created by the help desk. Check your email or contact your supervisor.");
   }
 
-  const user = readMockUsers().find((u) => u.email === normalized);
-  if (!user) {
-    throw new Error("We couldn't find a student account with that email. Sign up first.");
-  }
+  setToken(token);
   return user;
 }
 
@@ -93,4 +57,5 @@ export function clearSession() {
   } catch {
     // ignore
   }
+  setToken(null);
 }
