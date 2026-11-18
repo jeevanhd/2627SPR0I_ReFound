@@ -19,20 +19,26 @@ Anyone on the course can open it without being added as a collaborator.
 
 ## Getting Started (Run Locally)
 
-> The run command is not finished yet. It will be added once the service and
-> Docker Compose files exist.
+One command starts the database, the API and the web UI:
 
-1. Clone the repository:
+```
+git clone https://github.com/kalviumcommunity/2627SPR0I_ReFound.git
+cd 2627SPR0I_ReFound
+npm run dev
+```
 
-   ```
-   git clone https://github.com/kalviumcommunity/2627SPR0I_ReFound.git
-   cd 2627SPR0I_ReFound
-   ```
+`npm run dev` creates `backend/.env` from the example on first run, starts
+PostgreSQL in a Docker container, applies the schema, seeds the sample records,
+then serves the API on http://localhost:3000 and the UI on http://localhost:5173.
+It waits until both answer before it says they are up, and Ctrl-C stops the API
+and the UI. The database container keeps its data between runs.
 
-2. Match the local tool versions in [SETUP.md](SETUP.md) (Docker, Docker Compose, Git, psql).
-   The API's base image and npm packages are pinned — see [DEPENDENCIES.md](DEPENDENCIES.md)
-   for what is pinned and how to upgrade on purpose.
-3. Run the service: _coming soon_ (`docker compose up`).
+- Already have PostgreSQL running? `SKIP_DB=1 npm run dev` uses it instead of Docker.
+- Match the pinned tool versions in [SETUP.md](SETUP.md). The API's base image and
+  npm packages are pinned — see [DEPENDENCIES.md](DEPENDENCIES.md) for what is
+  pinned and how to upgrade on purpose.
+- Prefer to start the pieces yourself? `backend/README.md` and `frontend/README.md`
+  each have their own steps.
 
 ## Assigned Incident
 

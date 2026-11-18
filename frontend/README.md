@@ -1,8 +1,9 @@
 # Refound — Frontend
 
 React (Vite) frontend for Refound, the campus lost-and-found register.
-Every screen in the PRD flow is built. Data is mocked in the browser until the
-frontend is connected to the Express API in [`../backend`](../backend).
+Every screen in the PRD flow is built. Sign-in, the staff desk and the logbook
+talk to the Express API in [`../backend`](../backend); the student listing, item
+detail and claim form still read the bundled sample data.
 
 ## Run locally
 
@@ -13,6 +14,9 @@ npm run dev
 ```
 
 Open http://localhost:5173
+
+To start the database, the API and this UI together, run `npm run dev` from the
+repository root instead.
 
 ### Demo accounts (any password)
 
@@ -50,23 +54,20 @@ claim and logged item in this browser.
 A crash on any page shows a recovery screen instead of a blank page, and the
 navigation turns into a menu on phone-sized screens.
 
-## Where the mocks live
+## What still uses sample data
+
+Sign-in, the staff desk (`/staff/*`) and the logbook are live: they call the API
+through [`src/api/client.js`](src/api/client.js), which attaches the JWT and reads
+`VITE_API_URL`. The student side is not wired yet.
 
 | File | Stands in for |
 | --- | --- |
-| [`src/auth/authService.js`](src/auth/authService.js) | `POST /api/auth/signup`, `POST /api/auth/login` |
 | [`src/services/itemsService.js`](src/services/itemsService.js) | Public items and student claims (`GET /api/items`, `POST /api/items/:ref/claims`, `GET /api/claims/mine`, withdraw a pending claim, unread claim updates) — not built in the backend yet |
-| [`src/services/staffService.js`](src/services/staffService.js) | `POST /api/items`, `GET /api/items/:ref/claims`, `PATCH /api/claims/:id` (needs a `reason` field for rejections; approving should close other pending claims on the item), `POST /api/claims/:id/handover` |
-| [`src/services/auditService.js`](src/services/auditService.js) | `GET /api/audit` |
-| [`src/services/mockDb.js`](src/services/mockDb.js) | The shared browser store all mocks read and write |
-
-Each mock function names the endpoint it replaces, and its request and response
-shapes follow the backend, so connecting the real API means swapping function
-bodies for `fetch()` calls. The staff inventory (`/staff/items`) has no backend
-endpoint yet.
+| [`src/data/items.js`](src/data/items.js) | The records `GET /api/items` will return; the same 24 are seeded into the database by [`backend/scripts/seed-items.js`](../backend/scripts/seed-items.js), so the desk and the student list agree |
+| [`src/services/mockDb.js`](src/services/mockDb.js) | The browser store the student mocks read and write |
 
 Mocks never store passwords. Role checks in the UI only hide screens — the server
-must enforce them.
+enforces them, which is why a student account cannot sign in through the staff tab.
 
 ## Pointing the UI at the API
 

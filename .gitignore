@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment: never commit a real .env
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# Logs and editor noise
+*.log
+.DS_Store
+.idea/
+.vscode/
