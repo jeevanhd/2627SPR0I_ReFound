@@ -8,7 +8,7 @@ frontend is connected to the Express API in [`../backend`](../backend).
 
 ```
 cd frontend
-npm install
+npm ci                        # installs exactly what package-lock.json records
 npm run dev
 ```
 
