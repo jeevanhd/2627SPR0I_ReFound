@@ -69,6 +69,15 @@ Kept on purpose: `package.json` + `package-lock.json` (pinned deps), `db/schema.
 | GET | `/api/staff/items` | staff | Every record, returned ones included, with claim counts and the private note |
 | GET | `/api/staff/claims?status=` | staff | The review queue, with the private answers and item detail |
 | GET | `/api/audit?action=&q=&limit=` | supervisor | Read the audit history, newest first |
+| GET | `/api/items?q=&category=&location=` | anyone | Public register search (every keyword must match; returned items hidden) |
+| GET | `/api/items/locations` | anyone | Places items were found, for the search filter |
+| GET | `/api/items/:ref` | anyone | One public record (never the private note) |
+| POST | `/api/items/:ref/claims` | student | File a claim; a withdrawn claim can be re-filed |
+| GET | `/api/claims/mine` | student | My claims with my answers and the outcome |
+| GET | `/api/claims/mine/:id` | student | One of my claims (someone else's is a 404) |
+| POST | `/api/claims/mine/:id/withdraw` | student | Withdraw while still pending |
+| GET | `/api/claims/mine/updates` | student | Outcomes I haven't opened yet (navbar badge) |
+| POST | `/api/claims/mine/seen` | student | Mark updates read (`{ ids }`, or all) |
 | GET | `/api/health` | anyone | Liveness check |
 
 ## Rules the code enforces
@@ -95,14 +104,8 @@ Kept on purpose: `package.json` + `package-lock.json` (pinned deps), `db/schema.
 
 ## Sample data
 
-`npm run seed:items` loads `db/sample-items.json` — the same 24 records the
-frontend ships in `src/data/items.js` — so the staff inventory and the student
-listing show the same rack instead of one being empty. It is idempotent (existing
-refs are skipped) and it advances `item_ref_seq` past any ref already used, so a
-newly registered item can never collide with a seeded one.
-
-## What is not built yet
-
-Public item search (`GET /api/items`), item detail (`GET /api/items/:ref`),
-student claim submission (`POST /api/items/:ref/claims`) and
-`GET /api/claims/mine`. The frontend still uses its mocks until those land.
+The frontend has no built-in data: every page reads this API. For a demo rack,
+`npm run seed:items` (optional) loads 24 sample records from
+`db/sample-items.json`. It is idempotent (existing refs are skipped) and it
+advances `item_ref_seq` past any ref already used, so a newly registered item can
+never collide with a seeded one.
