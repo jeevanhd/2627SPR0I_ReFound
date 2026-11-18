@@ -1,10 +1,13 @@
 # Refound — Frontend
 
 React (Vite) frontend for Refound, the campus lost-and-found register.
-Every screen in the PRD flow is built. Data is mocked in the browser until the
-frontend is connected to the Express API in [`../backend`](../backend).
+Every screen in the PRD flow is built, and every page reads and writes through the
+Express API in [`../backend`](../backend). Nothing is stored in the browser except
+the signed-in session.
 
 ## Run locally
+
+Start PostgreSQL and the backend first (see [`../backend/README.md`](../backend/README.md)), then:
 
 ```
 cd frontend
@@ -14,16 +17,12 @@ npm run dev
 
 Open http://localhost:5173
 
-### Demo accounts (any password)
+### Accounts
 
 | Role | How |
 | --- | --- |
 | Student | Sign up at `/signup`, then log in |
-| Staff | `staff@campus.edu` on the **Staff / Volunteer** tab |
-| Supervisor | `supervisor@campus.edu` on the **Staff / Volunteer** tab |
-
-In dev mode the footer has **Reset demo data**, which clears every mock account,
-claim and logged item in this browser.
+| Staff / Supervisor | Created on the server with `npm run seed:staff` (email, role and password come from `backend/.env`); log in on the **Staff / Volunteer** tab |
 
 ## Pages
 
@@ -50,34 +49,26 @@ claim and logged item in this browser.
 A crash on any page shows a recovery screen instead of a blank page, and the
 navigation turns into a menu on phone-sized screens.
 
-## Where the mocks live
+## Which file calls which endpoint
 
-| File | Stands in for |
+| File | Endpoints |
 | --- | --- |
 | [`src/auth/authService.js`](src/auth/authService.js) | `POST /api/auth/signup`, `POST /api/auth/login` |
-| [`src/services/itemsService.js`](src/services/itemsService.js) | Public items and student claims (`GET /api/items`, `POST /api/items/:ref/claims`, `GET /api/claims/mine`, withdraw a pending claim, unread claim updates) — not built in the backend yet |
-| [`src/services/staffService.js`](src/services/staffService.js) | `POST /api/items`, `GET /api/items/:ref/claims`, `PATCH /api/claims/:id` (needs a `reason` field for rejections; approving should close other pending claims on the item), `POST /api/claims/:id/handover` |
+| [`src/services/itemsService.js`](src/services/itemsService.js) | `GET /api/items`, `/api/items/locations`, `/api/items/:ref`, `POST /api/items/:ref/claims`, `/api/claims/mine/*` |
+| [`src/services/staffService.js`](src/services/staffService.js) | `POST /api/items`, `GET /api/items/:ref/claims`, `/api/staff/*`, `PATCH /api/claims/:id`, `POST /api/claims/:id/handover` |
 | [`src/services/auditService.js`](src/services/auditService.js) | `GET /api/audit` |
-| [`src/services/mockDb.js`](src/services/mockDb.js) | The shared browser store all mocks read and write |
 
-Each mock function names the endpoint it replaces, and its request and response
-shapes follow the backend, so connecting the real API means swapping function
-bodies for `fetch()` calls. The staff inventory (`/staff/items`) has no backend
-endpoint yet.
-
-Mocks never store passwords. Role checks in the UI only hide screens — the server
-must enforce them.
+Role checks in the UI only hide screens — the server enforces them.
 
 ## Pointing the UI at the API
 
-The staff desk, the logbook and sign-in talk to the backend over HTTP. Copy
-`.env.example` to `.env.local` and set `VITE_API_URL` (defaults to
+Copy `.env.example` to `.env.local` and set `VITE_API_URL` (defaults to
 `http://localhost:3000`):
 
 ```
 VITE_API_URL=http://localhost:3000
 ```
 
-Start the backend first (`cd ../backend && npm start`), otherwise the screens
-report that they cannot reach the API. The student listing, item detail and claim
-form still read the bundled sample data until the public API lands.
+If `localhost` reaches a different program on your machine (for example a Docker
+or WSL relay holding port 3000 on IPv6), use `http://127.0.0.1:3000` instead.
+Without a running backend, the screens report that they cannot reach the API.

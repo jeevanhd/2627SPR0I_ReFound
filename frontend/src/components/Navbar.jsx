@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Logo from "./Logo.jsx";
-import { CLAIMS_CHANGED } from "../services/mockDb.js";
+import { CLAIMS_CHANGED } from "../services/events.js";
 import { getClaimUpdates } from "../services/itemsService.js";
 
 /** Number of claim outcomes the signed-in student hasn't seen yet. */
@@ -13,14 +13,20 @@ function useUnseenCount(user, pathname) {
       setCount(0);
       return undefined;
     }
-    const refresh = () => setCount(getClaimUpdates(user.email).length);
+    let active = true;
+    const refresh = () =>
+      getClaimUpdates()
+        .then((updates) => active && setCount(updates.length))
+        .catch(() => active && setCount(0));
     refresh();
+    // Staff decide claims elsewhere, so also re-check when the tab regains focus and every minute.
+    const timer = window.setInterval(refresh, 60000);
     window.addEventListener(CLAIMS_CHANGED, refresh);
-    window.addEventListener("storage", refresh); // staff acting in another tab
     window.addEventListener("focus", refresh);
     return () => {
+      active = false;
+      window.clearInterval(timer);
       window.removeEventListener(CLAIMS_CHANGED, refresh);
-      window.removeEventListener("storage", refresh);
       window.removeEventListener("focus", refresh);
     };
   }, [user, pathname]);

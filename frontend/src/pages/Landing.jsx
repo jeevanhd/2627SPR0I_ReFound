@@ -1,20 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
-
-const TAGS = [
-  { ref: "RF-0142", item: "Blue steel bottle", where: "Library, 2nd floor", color: "marker" },
-  { ref: "RF-0139", item: "Black earbuds case", where: "Cafeteria", color: "sky" },
-  { ref: "RF-0131", item: "Lanyard with keys", where: "Block C stairs", color: "rose" },
-];
-
-const TICKER = [
-  "RF-0142 · Blue steel bottle · Library",
-  "RF-0141 · Grey hoodie · Sports hall",
-  "RF-0140 · Calculator fx-991 · Exam hall B",
-  "RF-0139 · Earbuds case · Cafeteria",
-  "RF-0137 · Umbrella, red · Main gate",
-  "RF-0131 · Lanyard + keys · Block C",
-];
+import { colorFor, latestItems } from "../services/itemsService.js";
 
 const FEATURES = [
   { no: "01", title: "One register, searchable", text: "No more paper books or group-chat guesswork. Every found item lives in one list you can search." },
@@ -32,6 +19,14 @@ const STEPS = [
 
 export default function Landing() {
   const { user } = useAuth();
+  // The newest items on the real register. If the API is down or the rack is empty, the
+  // hero simply shows no tags and the ticker is hidden.
+  const [latest, setLatest] = useState([]);
+  useEffect(() => {
+    latestItems(8).then(setLatest).catch(() => setLatest([]));
+  }, []);
+  const tags = latest.slice(0, 3);
+  const ticker = latest.map((i) => `${i.ref} · ${i.title} · ${i.location}`);
 
   return (
     <>
@@ -67,14 +62,14 @@ export default function Landing() {
             <p className="note mono">Staff &amp; desk volunteers: log in with the account your supervisor issued.</p>
           </div>
 
-          <div className="rack" aria-label="Examples of found items">
+          <div className="rack" aria-label="Newest found items">
             <span className="rack__rail" aria-hidden="true" />
-            {TAGS.map((t, i) => (
-              <Link key={t.ref} to={`/items/${t.ref}`} className={`tag tag--${t.color} tag--link`} style={{ "--i": i }}>
+            {tags.map((t, i) => (
+              <Link key={t.ref} to={`/items/${t.ref}`} className={`tag tag--${colorFor(t.category)} tag--link`} style={{ "--i": i }}>
                 <span className="tag__hole" aria-hidden="true" />
                 <p className="tag__ref mono">{t.ref}</p>
-                <h3 className="tag__item">{t.item}</h3>
-                <p className="tag__where mono">↳ {t.where}</p>
+                <h3 className="tag__item">{t.title}</h3>
+                <p className="tag__where mono">↳ {t.location}</p>
                 <span className="stamp" aria-hidden="true">
                   Found
                 </span>
@@ -84,15 +79,17 @@ export default function Landing() {
         </div>
       </section>
 
-      <div className="ticker" aria-label="Recently found">
-        <div className="ticker__track">
-          {[...TICKER, ...TICKER].map((t, i) => (
-            <span key={i} className="mono" aria-hidden={i >= TICKER.length}>
-              ✱ {t}
-            </span>
-          ))}
+      {ticker.length > 0 && (
+        <div className="ticker" aria-label="Recently found">
+          <div className="ticker__track">
+            {[...ticker, ...ticker].map((t, i) => (
+              <span key={i} className="mono" aria-hidden={i >= ticker.length}>
+                ✱ {t}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <section className="section">
         <div className="container">

@@ -8,14 +8,19 @@ export default function ItemDetail() {
   const { user } = useAuth();
   const [item, setItem] = useState(null);
   const [state, setState] = useState("loading");
+  const [myClaim, setMyClaim] = useState(null);
+  const isStudent = user?.role === "student";
 
   useEffect(() => {
     let cancelled = false;
     setState("loading");
     getItem(ref)
-      .then((found) => {
+      .then(async (found) => {
+        // Only a student has claims to look up; the item page works without them.
+        const mine = isStudent ? await findMyClaim(found.ref).catch(() => null) : null;
         if (!cancelled) {
           setItem(found);
+          setMyClaim(mine);
           setState("ready");
         }
       })
@@ -23,7 +28,7 @@ export default function ItemDetail() {
     return () => {
       cancelled = true;
     };
-  }, [ref]);
+  }, [ref, isStudent]);
 
   if (state === "loading") {
     return <div className="container detail"><p className="mono muted">Pulling tag {ref}…</p></div>;
@@ -41,8 +46,6 @@ export default function ItemDetail() {
       </div>
     );
   }
-
-  const myClaim = user ? findMyClaim(user.email, item.ref) : null;
 
   return (
     <div className="container detail">

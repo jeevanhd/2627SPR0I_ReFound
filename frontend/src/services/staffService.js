@@ -4,19 +4,9 @@
 // the mock out did not touch a single page.
 
 import { api } from "../api/client.js";
-import { CLAIMS_CHANGED } from "./mockDb.js";
+import { notifyClaimsChanged, todayISO } from "./events.js";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const todayISO = () => new Date().toISOString().slice(0, 10);
-
-/** The navbar badge listens for this; the API has no push channel. */
-const notifyClaimsChanged = () => {
-  try {
-    window.dispatchEvent(new Event(CLAIMS_CHANGED));
-  } catch {
-    // no window (tests) — nothing to notify
-  }
-};
 
 /** Same rules as parseItemInput() in backend/src/lib/items.js. */
 export function validateItemInput(input) {

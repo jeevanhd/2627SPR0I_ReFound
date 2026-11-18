@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import FormField from "../../components/FormField.jsx";
 import { CATEGORIES, colorFor, formatDate, listLocations } from "../../services/itemsService.js";
 import { registerItem, validateItemInput } from "../../services/staffService.js";
-import { todayISO } from "../../services/mockDb.js";
+import { todayISO } from "../../services/events.js";
 import { hasErrors } from "../../utils/validation.js";
 
 const EMPTY = { title: "", category: "", location: "", foundOn: "", description: "", privateNote: "" };
 
 export default function RegisterItem() {
-  const locations = useMemo(listLocations, []);
+  const [locations, setLocations] = useState([]);
+  useEffect(() => {
+    listLocations().then(setLocations).catch(() => setLocations([]));
+  }, []);
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
