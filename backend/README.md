@@ -11,7 +11,7 @@ student claim submission are the other half of the API.
 ```bash
 cd backend
 cp .env.example .env          # fill in DATABASE_URL and JWT_SECRET
-npm install
+npm ci                        # installs exactly what package-lock.json records
 npm run db:init               # apply db/schema.sql (safe to re-run)
 npm run seed:staff            # creates the staff account from .env
 npm run seed:items            # optional: the 24 sample records the UI ships with

@@ -11,7 +11,7 @@ Start PostgreSQL and the backend first (see [`../backend/README.md`](../backend/
 
 ```
 cd frontend
-npm install
+npm ci                        # installs exactly what package-lock.json records
 npm run dev
 ```
 
