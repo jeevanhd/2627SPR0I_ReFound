@@ -55,12 +55,6 @@ Kept on purpose: `package.json` + `package-lock.json` (pinned deps), `db/schema.
 `npm test` runs the unit tests, and the integration tests too when
 `DATABASE_URL` is set — without it they are skipped rather than silently passing.
 
-The script is `node --test` **with no arguments**. Keep it that way: passing a
-directory (`node --test test/`) searched that folder on Node 20, but since Node 22
-the positional argument is a glob pattern, so `test/` matches the directory itself
-and gets executed as a test file — `Cannot find module '.../backend/test'`. With no
-argument, Node 20, 22 and 24 all discover the same `*.test.js` files.
-
 ## Endpoints in this slice
 
 | Method | Path | Who | Purpose |
