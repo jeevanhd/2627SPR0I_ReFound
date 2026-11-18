@@ -62,6 +62,18 @@ If the build breaks tomorrow and `git log` shows no change to these files, the
 cause is outside the pinned set (network, registry outage, Docker Hub rate limit,
 host). It is not "a dependency moved".
 
+## Installing: always `npm ci`
+
+To install dependencies — fresh clone, after `git pull`, switching branches, in
+Docker — run `npm ci` in `backend/` or `frontend/`. It installs exactly what
+`package-lock.json` records, never rewrites it, and fails if `package.json` and
+the lock disagree.
+
+Do not run a bare `npm install` to "get set up": it can rewrite the lockfile, and
+that is drift nobody decided on. `npm install <pkg>@<version>` is used only for
+the deliberate upgrade below. If `package-lock.json` shows up as changed and you
+did not mean to upgrade, `git checkout package-lock.json && npm ci`.
+
 ## How a teammate upgrades on purpose
 
 Pinning is not freezing. An upgrade is a normal, reviewed commit on a branch.
