@@ -33,7 +33,10 @@ export function requireAuth(allowedRoles = []) {
       if (!user) throw new HttpError(401, 'This account no longer exists.');
 
       if (allowedRoles.length && !allowedRoles.includes(user.role)) {
-        throw new HttpError(403, 'This action needs a staff account.');
+        throw new HttpError(
+          403,
+          allowedRoles.includes('student') ? 'Only student accounts can do this.' : 'This action needs a staff account.'
+        );
       }
 
       req.user = user;

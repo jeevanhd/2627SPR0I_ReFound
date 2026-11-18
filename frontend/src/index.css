@@ -2315,14 +2315,6 @@ a:focus-visible {
   gap: 1.25rem;
 }
 
-.footer__reset {
-  font: inherit;
-  border: 1.5px dashed var(--stamp);
-  background: transparent;
-  color: var(--stamp);
-  padding: 0.15rem 0.5rem;
-  cursor: pointer;
-}
 
 /* ---------- student home ---------- */
 .home__top {

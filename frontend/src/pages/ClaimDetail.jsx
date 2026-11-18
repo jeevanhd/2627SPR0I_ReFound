@@ -58,10 +58,10 @@ export default function ClaimDetail() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getMyClaim(user.email, id)
+    getMyClaim(id)
       .then((c) => {
         setClaim(c);
-        markClaimsSeen(user.email, [c.id]); // opening the claim clears its notification
+        if (c.unread) markClaimsSeen([c.id]).catch(() => {}); // opening the claim clears its notification
       })
       .catch(() => setMissing(true));
   }, [id, user.email]);
@@ -70,8 +70,8 @@ export default function ClaimDetail() {
     setBusy(true);
     setError("");
     try {
-      await withdrawClaim(user, claim.id);
-      setClaim(await getMyClaim(user.email, claim.id));
+      await withdrawClaim(claim.id);
+      setClaim(await getMyClaim(claim.id));
       setConfirming(false);
     } catch (err) {
       setError(err.message);

@@ -15,17 +15,23 @@ export default function MyClaims() {
   const { user } = useAuth();
   const [claims, setClaims] = useState(null);
   const [updates, setUpdates] = useState([]);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    getMyClaims(user.email).then(setClaims);
-    setUpdates(getClaimUpdates(user.email));
+    getMyClaims()
+      .then(setClaims)
+      .catch((err) => {
+        setClaims([]);
+        setLoadError(err.message);
+      });
+    getClaimUpdates().then(setUpdates).catch(() => setUpdates([]));
   }, [user.email]);
 
   const unseen = new Set(updates.map((u) => u.id));
 
   function markAllRead() {
-    markClaimsSeen(user.email);
     setUpdates([]);
+    markClaimsSeen().catch(() => {});
   }
 
   return (
@@ -61,6 +67,12 @@ export default function MyClaims() {
             ))}
           </ul>
         </section>
+      )}
+
+      {loadError && (
+        <div className="alert alert--error" role="alert">
+          {loadError}
+        </div>
       )}
 
       {claims === null ? (

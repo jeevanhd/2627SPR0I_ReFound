@@ -10,18 +10,31 @@ export default function Browse() {
   const location = params.get("location") ?? "";
 
   const [items, setItems] = useState([]);
-  const [locations] = useState(listLocations);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    listLocations().then(setLocations).catch(() => setLocations([]));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    searchItems({ q, category, location }).then((found) => {
-      if (!cancelled) {
-        setItems(found);
-        setLoading(false);
-      }
-    });
+    setLoadError("");
+    searchItems({ q, category, location })
+      .then((found) => {
+        if (!cancelled) setItems(found);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setItems([]);
+          setLoadError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -103,7 +116,19 @@ export default function Browse() {
         </div>
       </div>
 
-      {!loading && items.length === 0 ? (
+      {loadError ? (
+        <div className="alert alert--error" role="alert">
+          {loadError}
+        </div>
+      ) : !loading && items.length === 0 && !filtering ? (
+        <div className="empty">
+          <p className="stamp stamp--big" aria-hidden="true">
+            Empty rack
+          </p>
+          <h2>Nothing has been logged yet.</h2>
+          <p className="muted">When the help desk logs a found item, it appears here. Check back later.</p>
+        </div>
+      ) : !loading && items.length === 0 ? (
         <div className="empty">
           <p className="stamp stamp--big" aria-hidden="true">
             No match
