@@ -30,6 +30,8 @@ Anyone on the course can open it without being added as a collaborator.
    ```
 
 2. Match the local tool versions in [SETUP.md](SETUP.md) (Docker, Docker Compose, Git, psql).
+   The API's base image and npm packages are pinned — see [DEPENDENCIES.md](DEPENDENCIES.md)
+   for what is pinned and how to upgrade on purpose.
 3. Run the service: _coming soon_ (`docker compose up`).
 
 ## Assigned Incident
