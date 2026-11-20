@@ -8,7 +8,7 @@ New to this repo? Three things, in this order, then pick up an issue.
 
 1. **Where it lives.** https://github.com/kalviumcommunity/2627SPR0I_ReFound — public, so the course can open it without being added as a collaborator.
 2. **What we are fixing.** [Issue #8 — Assigned incident: found items are not searchable and private ownership details are exposed](https://github.com/kalviumcommunity/2627SPR0I_ReFound/issues/8).
-3. **How to run it locally.** [SETUP.md](SETUP.md) pins the four tool versions. The `docker compose up` command is **not finished yet** — it lands once the service and Compose files exist.
+3. **How to run it locally.** [SETUP.md](SETUP.md) pins the four tool versions. Then `docker compose up --build` starts the API and PostgreSQL together — see [Getting Started](#getting-started-run-locally).
 
 Work reaches `main` only through a reviewed pull request. There are no direct pushes to `main`; see [Team Workflow](#team-workflow).
 
@@ -19,26 +19,42 @@ Anyone on the course can open it without being added as a collaborator.
 
 ## Getting Started (Run Locally)
 
-One command starts the database, the API and the web UI:
+1. Clone the repository:
 
-```
-git clone https://github.com/kalviumcommunity/2627SPR0I_ReFound.git
-cd 2627SPR0I_ReFound
-npm run dev
-```
+   ```
+   git clone https://github.com/kalviumcommunity/2627SPR0I_ReFound.git
+   cd 2627SPR0I_ReFound
+   ```
 
-`npm run dev` creates `backend/.env` from the example on first run, starts
-PostgreSQL in a Docker container, applies the schema, seeds the sample records,
-then serves the API on http://localhost:3000 and the UI on http://localhost:5173.
-It waits until both answer before it says they are up, and Ctrl-C stops the API
-and the UI. The database container keeps its data between runs.
+2. Match the local tool versions in [SETUP.md](SETUP.md) (Docker, Docker Compose, Git, psql).
+   The API's base image and npm packages are pinned — see [DEPENDENCIES.md](DEPENDENCIES.md)
+   for what is pinned and how to upgrade on purpose.
+3. Create your local config and replace both placeholders (`POSTGRES_PASSWORD`, `JWT_SECRET`)
+   with your own values. `.env` is git-ignored; never commit it.
 
-- Already have PostgreSQL running? `SKIP_DB=1 npm run dev` uses it instead of Docker.
-- Match the pinned tool versions in [SETUP.md](SETUP.md). The API's base image and
-  npm packages are pinned — see [DEPENDENCIES.md](DEPENDENCIES.md) for what is
-  pinned and how to upgrade on purpose.
-- Prefer to start the pieces yourself? `backend/README.md` and `frontend/README.md`
-  each have their own steps.
+   ```
+   cp .env.example .env
+   ```
+
+4. Start the API and its PostgreSQL database with one command:
+
+   ```
+   docker compose up --build
+   ```
+
+   [compose.yaml](compose.yaml) runs two services: `api` (built from `backend/`) and `db`
+   (`postgres:16`). Database files live on the named volume `refound-db`, so they survive
+   `docker compose down` and restarts. The API reaches the database by its service name `db`,
+   not `localhost`, and applies the schema on start. No PostgreSQL install is needed on your laptop.
+
+5. Check it is up:
+
+   ```
+   curl http://127.0.0.1:3000/api/health      # {"ok":true}
+   curl http://127.0.0.1:3000/api/items       # {"items":[]}
+   ```
+
+   Stop with `Ctrl+C` or `docker compose down`. `docker compose down -v` also deletes the database volume.
 
 ## Assigned Incident
 
