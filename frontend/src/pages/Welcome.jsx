@@ -13,8 +13,8 @@ export default function Welcome() {
 
   useEffect(() => {
     if (!isStudent) return;
-    getMyClaims(user.email).then(setClaims);
-    latestItems(4).then(setLatest);
+    getMyClaims().then(setClaims).catch(() => setClaims([]));
+    latestItems(4).then(setLatest).catch(() => setLatest([]));
   }, [isStudent, user.email]);
 
   if (!isStudent) return <Navigate to="/staff" replace />;

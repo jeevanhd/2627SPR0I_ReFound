@@ -7,6 +7,8 @@ detail and claim form still read the bundled sample data.
 
 ## Run locally
 
+Start PostgreSQL and the backend first (see [`../backend/README.md`](../backend/README.md)), then:
+
 ```
 cd frontend
 npm ci                        # installs exactly what package-lock.json records
@@ -23,11 +25,7 @@ repository root instead.
 | Role | How |
 | --- | --- |
 | Student | Sign up at `/signup`, then log in |
-| Staff | `staff@campus.edu` on the **Staff / Volunteer** tab |
-| Supervisor | `supervisor@campus.edu` on the **Staff / Volunteer** tab |
-
-In dev mode the footer has **Reset demo data**, which clears every mock account,
-claim and logged item in this browser.
+| Staff / Supervisor | Created on the server with `npm run seed:staff` (email, role and password come from `backend/.env`); log in on the **Staff / Volunteer** tab |
 
 ## Pages
 
@@ -60,7 +58,7 @@ Sign-in, the staff desk (`/staff/*`) and the logbook are live: they call the API
 through [`src/api/client.js`](src/api/client.js), which attaches the JWT and reads
 `VITE_API_URL`. The student side is not wired yet.
 
-| File | Stands in for |
+| File | Endpoints |
 | --- | --- |
 | [`src/services/itemsService.js`](src/services/itemsService.js) | Public items and student claims (`GET /api/items`, `POST /api/items/:ref/claims`, `GET /api/claims/mine`, withdraw a pending claim, unread claim updates) — not built in the backend yet |
 | [`src/data/items.js`](src/data/items.js) | The records `GET /api/items` will return; the same 24 are seeded into the database by [`backend/scripts/seed-items.js`](../backend/scripts/seed-items.js), so the desk and the student list agree |
@@ -71,14 +69,13 @@ enforces them, which is why a student account cannot sign in through the staff t
 
 ## Pointing the UI at the API
 
-The staff desk, the logbook and sign-in talk to the backend over HTTP. Copy
-`.env.example` to `.env.local` and set `VITE_API_URL` (defaults to
+Copy `.env.example` to `.env.local` and set `VITE_API_URL` (defaults to
 `http://localhost:3000`):
 
 ```
 VITE_API_URL=http://localhost:3000
 ```
 
-Start the backend first (`cd ../backend && npm start`), otherwise the screens
-report that they cannot reach the API. The student listing, item detail and claim
-form still read the bundled sample data until the public API lands.
+If `localhost` reaches a different program on your machine (for example a Docker
+or WSL relay holding port 3000 on IPv6), use `http://127.0.0.1:3000` instead.
+Without a running backend, the screens report that they cannot reach the API.

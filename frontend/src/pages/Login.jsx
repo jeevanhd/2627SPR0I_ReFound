@@ -116,8 +116,7 @@ export default function Login() {
           </p>
         ) : (
           <p className="auth__switch muted small">
-            Staff accounts are created by your supervisor. Demo: <code>staff@campus.edu</code> or{" "}
-            <code>supervisor@campus.edu</code> with any password.
+            Staff accounts are created by your supervisor. Use the email and password they gave you.
           </p>
         )}
       </Ticket>

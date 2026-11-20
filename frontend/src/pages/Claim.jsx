@@ -31,12 +31,18 @@ export default function Claim() {
   const [claim, setClaim] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     getItem(ref)
-      .then((found) => {
+      .then(async (found) => {
+        const mine = await findMyClaim(found.ref);
+        if (cancelled) return;
         setItem(found);
-        setClaim(findMyClaim(user.email, found.ref));
+        setClaim(mine);
       })
-      .catch(() => setMissing(true));
+      .catch(() => !cancelled && setMissing(true));
+    return () => {
+      cancelled = true;
+    };
   }, [ref, user.email]);
 
   const update = (field) => (e) => {
@@ -53,7 +59,7 @@ export default function Claim() {
     if (hasErrors(found)) return;
     setSubmitting(true);
     try {
-      setClaim(await submitClaim({ item, user, ...form }));
+      setClaim(await submitClaim({ item, ...form }));
     } catch (err) {
       setFormError(err.message);
     } finally {

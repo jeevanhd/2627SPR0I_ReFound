@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS claims (
 ALTER TABLE claims ADD COLUMN IF NOT EXISTS reason text;
 ALTER TABLE claims ADD COLUMN IF NOT EXISTS auto_closed boolean NOT NULL DEFAULT false;
 ALTER TABLE claims ADD COLUMN IF NOT EXISTS withdrawn_at timestamptz;
+-- The outcome the student last saw ('approved', 'rejected', 'returned'). Drives the
+-- "What's new" badge: an outcome that differs from seen_status is unread.
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS seen_status text;
 -- Widen the status check so a withdrawn claim is a valid state.
 ALTER TABLE claims DROP CONSTRAINT IF EXISTS claims_status_check;
 ALTER TABLE claims ADD CONSTRAINT claims_status_check
