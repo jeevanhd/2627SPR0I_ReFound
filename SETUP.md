@@ -156,6 +156,9 @@ PostgreSQL client and the Render free tier were all used at zero cost.
    hello-world line appears. Anything else, tell the team before you start
    writing code — a different version is a real difference, not a detail.
 
+6. **Start the stack** with `npm run dev` from the repository root. It starts
+   PostgreSQL, the API and the web UI together; see the [README](README.md).
+
 ## When it does not work
 
 **`Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the

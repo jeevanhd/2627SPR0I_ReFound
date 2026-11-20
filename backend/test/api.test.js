@@ -59,7 +59,7 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
     ['Campus Supervisor', supervisorEmail, await bcrypt.hash('supervisor-pass-1', 4)]
   );
 
-  let staffToken, studentToken, studentId, itemRef, claimId, secondClaimId, secondItemRef, supervisorToken;
+  let staffToken, studentToken, itemRef, claimId, secondClaimId, secondItemRef, supervisorToken;
 
   await t.test('health check answers', async () => {
     const res = await request('/api/health');
@@ -76,7 +76,6 @@ test('staff slice: auth, registration, review, handover', { skip }, async (t) =>
     assert.equal(res.body.user.role, 'student', 'a signup request must not be able to ask for the staff role');
     assert.equal(res.body.user.email, 'jeevan@campus.edu');
     studentToken = res.body.token;
-    studentId = res.body.user;
   });
 
   await t.test('signup rejects a short password and a duplicate email', async () => {

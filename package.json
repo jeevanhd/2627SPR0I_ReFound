@@ -1,0 +1,12 @@
+{
+  "name": "refound",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Campus lost and found register — one command starts the whole stack.",
+  "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "start": "bash scripts/dev.sh",
+    "test": "npm --prefix backend test",
+    "db:reset": "docker rm -f refound-pg"
+  }
+}
