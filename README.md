@@ -47,6 +47,14 @@ Anyone on the course can open it without being added as a collaborator.
    `docker compose down` and restarts. The API reaches the database by its service name `db`,
    not `localhost`, and applies the schema on start. No PostgreSQL install is needed on your laptop.
 
+   **No worker process.** That one command starts every process ReFound has. Incident #8
+   (search doesn't work, private details are exposed) has no stuck job and no background step.
+   Every action, including registering an item, reviewing a claim and recording a handover,
+   finishes inside its API request. The staff "review queue" is a database query, not a job
+   queue. So there is no worker service and no queue product. If a background step is added
+   later, it should be a second service in `compose.yaml` that uses the same image with a
+   different `command`, so a rollback moves both to the same release.
+
 5. Check it is up:
 
    ```
