@@ -2,6 +2,8 @@
 #   cp .env.example .env    (then replace the placeholder passwords in .env)
 #   docker compose up --build
 # Every value comes from .env. Nothing here belongs to one laptop.
+# No worker service on purpose: incident #8 has no stuck job or background step
+# (see README, "No worker process").
 
 services:
   api:
